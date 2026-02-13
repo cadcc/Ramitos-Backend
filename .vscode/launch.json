@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "hello",
+      "mainClass": "hello",
+      "buildTarget": "file:/var/home/davicom/Desktop/Productive/college/cadcc/repos/ramoscc-2025/?id=root",
+      "args": [],
+      "jvmOptions": [],
+      "env": {}
+    }
+  ]
+}
