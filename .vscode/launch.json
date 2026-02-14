@@ -10,6 +10,16 @@
       "args": [],
       "jvmOptions": [],
       "env": {}
+    },
+    {
+      "type": "scala",
+      "request": "launch",
+      "name": "Main",
+      "mainClass": "cl.cadcc.ramitos.Main",
+      "buildTarget": "file:/var/home/davicom/Desktop/Productive/college/cadcc/repos/ramoscc-2025/?id=root",
+      "args": [],
+      "jvmOptions": [],
+      "env": {}
     }
   ]
 }
