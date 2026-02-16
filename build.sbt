@@ -3,6 +3,8 @@ import smithy4s.codegen.Smithy4sCodegenPlugin
 val scala3Version = "3.8.1"
 val http4sVersion = "0.23.33"
 val log4catsVersion = "2.7.1"
+val jwtVersion = "11.0.3"
+val circeVersion = "0.14.15"
 
 ThisBuild / organization := "cl.cadcc"
 ThisBuild / version := "0.1.0-SNAPSHOT"
@@ -15,9 +17,17 @@ lazy val root = project
     scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % circeVersion,
+      "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
+
       // logging
       "org.typelevel" %% "log4cats-slf4j"   % log4catsVersion,
       "ch.qos.logback" % "logback-classic"  % "1.5.29", // TODO: remove to let users select their logging implementation
+
+      // jwt
+      "com.github.jwt-scala" %% "jwt-core" % jwtVersion,
+      "com.github.jwt-scala" %% "jwt-circe" % jwtVersion,
 
       // http4s
       "org.http4s" %% "http4s-ember-client" % http4sVersion,
