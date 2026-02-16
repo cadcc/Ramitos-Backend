@@ -52,6 +52,3 @@ CREATE TABLE review(
     interest FLOAT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-DROP TABLE review;
-DROP TABLE courses;

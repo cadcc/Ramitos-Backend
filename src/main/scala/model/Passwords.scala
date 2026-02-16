@@ -4,9 +4,17 @@ import java.time.LocalDateTime
 import doobie.{TableDefinition, Column}
 import doobie.implicits.javatimedrivernative._
 
+case class Password(
+    username: String,
+    secret: String,
+    accountId: Int,
+    createdAt: LocalDateTime,
+    updatedAt: LocalDateTime
+)
+
 object PasswordsTable extends TableDefinition("passwords"):
     val username: Column[String] = Column("username")
     val secret: Column[String] = Column("secret")
-    val account_id: Column[Int] = Column("account_id")
-    val created_at: Column[LocalDateTime] = Column("created_at")
-    val updated_at: Column[LocalDateTime] = Column("updated_at")
+    val accountId: Column[Int] = Column("account_id")
+    val createdAt: Column[LocalDateTime] = Column("created_at")
+    val updatedAt: Column[LocalDateTime] = Column("updated_at")
