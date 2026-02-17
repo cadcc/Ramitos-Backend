@@ -36,25 +36,7 @@ operation DccLogin {
   output: SessionTokens
 }
 
-structure PasswordCredentials {
-  @required
-  name: String
-
-  @required
-  password: String
-}
-
-structure DccCredentials {
-  @required
-  @httpQuery("username")
-  username: String
-
-  @required
-  @httpQuery("secret")
-  secret: String
-}
-
 structure SessionTokens {
   @required
-  message: String
+  accessToken: String
 }

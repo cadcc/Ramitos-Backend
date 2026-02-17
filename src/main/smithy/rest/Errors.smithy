@@ -6,7 +6,11 @@ use alloy#simpleRestJson
 
 @error("client")
 @httpError(401)
-structure NotAuthorized {
+structure NotAuthenticated {
     reason: String
     message: String
 }
+
+@error("client")
+@httpError(403)
+structure InsufficientPermissions {}
