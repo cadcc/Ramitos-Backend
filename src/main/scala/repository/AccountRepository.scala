@@ -1,43 +1,50 @@
 package cl.cadcc.ramitos.repository
 
 import cats._, cats.data._, cats.implicits._
-import doobie._, doobie.implicits._
+import doobie._, doobie.implicits._, doobie.syntax.all._
 import cl.cadcc.ramitos.model.Account
 import cl.cadcc.ramitos.model.AccountRole
 import scala.collection.mutable.ListBuffer
+import java.time._
 
 object AccountRepository {
+    val Table = Account.Table
 
     def create(displayName: String, role: AccountRole): ConnectionIO[Account] =
-        sql"INSERT INTO accounts (name, role) values ($displayName, $role)"
-        .update
-        .withUniqueGeneratedKeys("id", "name", "role", "created_at", "updated_at")
+        Table.insertInto(
+            Table.displayName --> displayName,
+            Table.role --> role
+        )
+            .update
+            .withUniqueGeneratedKeys(Table.columnNames*)
 
-    def update(id: Int, displayName: Option[String] = None, role: Option[AccountRole]): ConnectionIO[Account] =
-        var fragList: ListBuffer[Fragment] = ListBuffer()
+    def update(id: Int, displayName: Option[String] = None, role: Option[AccountRole], updatedAt: Instant): ConnectionIO[Account] =
+        var fragList: ListBuffer[(Fragment, Fragment)] = ListBuffer()
 
         displayName match {
-            case Some(value) => fragList.addAll(Seq(fr", ", fr"name = $value"))
+            case Some(value) => fragList += Table.displayName --> value
             case _ => 
         }
         role match {
-            case Some(value) => fragList.addAll(Seq(fr", ", fr"role = $value"))
+            case Some(value) => fragList += Table.role --> value
             case _ => 
         }
 
-        if(fragList.nonEmpty){
-            fragList.addOne(fr" WHERE id is $id")
-            var query = fragList.tail.fold(fr"UPDATE account SET ")
-                ((a,b) => a++b)
+        if fragList.nonEmpty then
+            fragList += Table.updatedAt --> updatedAt.atOffset(ZoneOffset.UTC).toLocalDateTime
+            val upds: NonEmptyVector[(Fragment, Fragment)] = NonEmptyVector.fromVectorUnsafe(fragList.toVector)
 
-            query.update
-            .withUniqueGeneratedKeys("id", "name", "role", "created_at", "updated_at")
-        } else {
-            throw Exception("Account Repository: No field to update")
-        }
+            sql"${Table.updateTable(upds)} WHERE ${Table.id === id}"
+                .update
+                .withUniqueGeneratedKeys(Table.columnNames*)
+        else
+            getById(id).flatMap {
+                case None => MonadThrow[ConnectionIO].raiseError(new Exception(""))
+                case Some(v) => v.pure
+            }
 
     def getById(id: Int): ConnectionIO[Option[Account]] =
-        sql"SELECT * FROM accounts WHERE id = {id}"
+        sql"SELECT ${Table.columns} FROM $Table WHERE ${Table.id === id}"
             .query[Account]
             .option
 }

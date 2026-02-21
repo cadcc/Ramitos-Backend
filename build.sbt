@@ -5,6 +5,8 @@ val http4sVersion = "0.23.33"
 val log4catsVersion = "2.7.1"
 val jwtVersion = "11.0.3"
 val circeVersion = "0.14.15"
+val doobieVersion = "1.0.0-RC11"
+val password4jVersion = "1.8.4"
 
 ThisBuild / organization := "cl.cadcc"
 ThisBuild / version := "0.1.0-SNAPSHOT"
@@ -17,6 +19,16 @@ lazy val root = project
     scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
+      // hashing
+      "com.password4j" % "password4j" % password4jVersion,
+
+      // doobie
+      "org.tpolecat" %% "doobie-core"     % doobieVersion,
+      "org.tpolecat" %% "doobie-postgres" % doobieVersion,
+      "org.tpolecat" %% "doobie-specs2"   % doobieVersion,
+      "org.postgresql" % "postgresql" % "42.7.10",
+
+      // json
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
@@ -33,6 +45,7 @@ lazy val root = project
       "org.http4s" %% "http4s-ember-client" % http4sVersion,
       "org.http4s" %% "http4s-ember-server" % http4sVersion,
       "org.http4s" %% "http4s-dsl"          % http4sVersion,
+      "org.http4s" %% "http4s-circe"        % http4sVersion,
 
       "io.github.arturaz" %% "doobie-typesafe" % "0.5.1",
 

@@ -1,5 +1,7 @@
 package cl.cadcc.ramitos.utils
 
+import cl.cadcc.ramitos.model.{AccountRole => ModelRole}
+import cl.cadcc.ramitos.schema.AccountRole
 import cats.syntax.all._
 import cats.mtl.Ask
 import cats.MonadThrow
@@ -24,5 +26,12 @@ object extensions {
             either match
                 case Left(value) => MonadError[F, Throw].raiseError(value)
                 case Right(value) => value.pure
-            
+    
+    extension (role: AccountRole)
+        def toModel() = this match {
+            case AccountRole.NONE => ModelRole.none
+            case AccountRole.STATS => ModelRole.stats
+            case AccountRole.MOD => ModelRole.mod
+            case AccountRole.ADMIN => ModelRole.admin
+        }
 }

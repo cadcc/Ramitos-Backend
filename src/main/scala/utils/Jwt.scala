@@ -1,6 +1,5 @@
 package cl.cadcc.ramitos
 
-import cl.cadcc.ramitos.model.AccountsTable
 import cl.cadcc.ramitos.model.Account
 import cl.cadcc.ramitos.utils.JavaTime
 import cats._
@@ -15,8 +14,8 @@ import io.circe.parser._
 import io.circe.Codec
 import pdi.jwt.JwtAlgorithm
 import scala.concurrent.duration._
-import pdi.jwt.JwtCirce
-import pdi.jwt.Jwt
+import pdi.jwt.{JwtCirce, Jwt}
+import pdi.jwt.exceptions.{JwtException => LibJwtException}
 import java.time.{Clock => JavaClock, ZoneId}
 import scala.util.Success
 import scala.util.Try
@@ -48,13 +47,6 @@ object JwtTokens {
         private val algo = JwtAlgorithm.HS256
         private val accessExpirity = (30*60).seconds
         private val leeway = 1.seconds
-
-        private val jwtCirce: JwtCirce = JwtCirce(
-            new JavaClock {
-                override def getZone(): ZoneId = ???
-                override def instant(): Instant = ???
-                override def withZone(zone: ZoneId): JavaClock = ???
-            })
         
         private val jwtOptions: JwtOptions = JwtOptions(
             signature = true,
@@ -66,12 +58,13 @@ object JwtTokens {
         def verifyAccessToken(token: String): F[Try[E]] =
             JavaTime[F].getEpochSeconds.map(now =>
                 for {
-                    claims <- jwtCirce.decode(token, secretKey, Seq(algo), jwtOptions)
+                    claims <- JwtCirce.decode(token, secretKey, Seq(algo), jwtOptions).adaptErr {
+                        case e : LibJwtException => JwtValidationException(e.getMessage())
+                    }
                     _ <- verifyTokenTime(claims, now)
                     session <- decode[E](claims.content) match
                         case Left(value) => Failure(JwtJsonException("The JWT content was not deserializable into a Session instance.", value))
                         case Right(value) => Success(value)
-                    
                 } yield session
             )
 
@@ -84,7 +77,7 @@ object JwtTokens {
                         issuedAt = now.getEpochSecond().some,
                         expiration = now.plusSeconds(accessExpirity.toSeconds).getEpochSecond().some,
                     )
-                jwtCirce.encode(claims, secretKey, algo)
+                JwtCirce.encode(claims, secretKey, algo)
             )
         
         private def verifyTokenTime(claims: JwtClaim, epochSeconds: Long): Try[Unit] =

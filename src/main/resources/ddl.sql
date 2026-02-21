@@ -41,7 +41,7 @@ CREATE TABLE courses(
     updated_at TIMESTAMP
 );
 
-CREATE TABLE review(
+CREATE TABLE reviews(
     id SERIAL PRIMARY KEY,
     account_id INTEGER REFERENCES accounts(id),
     course_code VARCHAR(20) NOT NULL REFERENCES courses(code),

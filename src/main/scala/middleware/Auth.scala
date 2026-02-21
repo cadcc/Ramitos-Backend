@@ -27,6 +27,14 @@ import cl.cadcc.ramitos.schema.NotAuthenticated
 import scala.util.Failure
 import scala.util.Success
 import cl.cadcc.ramitos.JwtJsonException
+import org.http4s._, org.http4s.dsl.io._, org.http4s.implicits._, org.http4s.circe._
+import io.circe.generic.auto._, io.circe.syntax._
+import cats.data.NonEmptyList
+import org.http4s.headers.`WWW-Authenticate`
+import cats.Applicative
+import io.circe.Json
+import org.http4s.dsl.impl.Responses.UnauthorizedOps
+import cl.cadcc.ramitos.JwtValidationException
 
 trait AuthMiddleware[F[_], E] {
     val askSession: Ask[F, E]
@@ -58,6 +66,7 @@ object AuthMiddleware {
     }
 
     private class AuthServerEndpointMiddlewareImpl[F[_]](using MonadThrow[F], Clock[F])(val localSession: Local[F, Option[T]]) extends ServerEndpointMiddleware.Simple[F] {
+        import cats.effect.{IO => _}
         def prepareWithHints(serviceHints: Hints, endpointHints: Hints): HttpApp[F] => HttpApp[F] =
             serviceHints.get[HttpBearerAuth] match {
                 case Some(value) =>
@@ -67,22 +76,6 @@ object AuthMiddleware {
                     }
                 case None => identity
             }
-
-        private def tryGetToken[F[_]](req: Request[F]) =
-            req.headers
-                .get[Authorization]
-                .collect {
-                    case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => Success(token)
-                    case Authorization(Credentials.Token(_, _)) =>
-                        Failure(new NotAuthenticated(
-                            reason = "Invalid Authentication scheme.".some,
-                            message = "Retry using Bearer scheme.".some
-                        ))
-                }
-                .getOrElse(Failure(new NotAuthenticated(
-                    reason = "Missing Authentication header.".some,
-                    message = "Retry including a valid Bearer token.".some
-                )))
         
         private def httpTransform(app: HttpApp[F]): HttpApp[F] = Kleisli {(req: Request[F]) =>
             for {
@@ -109,6 +102,10 @@ object AuthMiddleware {
                             case JwtJsonException(reason, cause) => new NotAuthenticated(
                                 reason = reason.some,
                                 message = cause.getClass.getCanonicalName.some
+                            )
+                            case JwtValidationException(reason) => new NotAuthenticated(
+                                reason = "JWT could not be validated".some,
+                                message = reason.some
                             )
                         }
                 response <- localSession.scope(app(req))(session.some)

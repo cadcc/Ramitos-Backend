@@ -11,13 +11,13 @@ service AccountService {
   operations: [GetSelf, CreateAccount, UpdateAccount]
 }
 
-@http(method: "GET", uri: "/api/users/@me")
+@http(method: "GET", uri: "/api/accounts/@me")
 @readonly
 operation GetSelf {
   output: Account
 }
 
-@http(method: "POST", uri: "/api/users")
+@http(method: "POST", uri: "/api/accounts")
 operation CreateAccount {
   input := {
     @required
@@ -27,13 +27,16 @@ operation CreateAccount {
     password: String
 
     @required
+    role: AccountRole
+
+    @required
     name: String
   }
 
   output: Account
 }
 
-@http(method: "PATCH", uri: "/api/users/{userId}")
+@http(method: "PATCH", uri: "/api/accounts/{userId}")
 @idempotent
 operation UpdateAccount {
   input := {
@@ -48,14 +51,24 @@ operation UpdateAccount {
 
 structure Account {
   @required
-  id: Long
+  id: Integer
 
   @required
   name: String
+
+  @required
+  role: AccountRole
 
   @required
   created_at: Timestamp
 
   @required
   updated_at: Timestamp
+}
+
+enum AccountRole {
+  NONE = "none",
+  STATS = "stats",
+  MOD = "mod",
+  ADMIN = "admin"
 }
