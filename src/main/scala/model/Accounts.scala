@@ -2,7 +2,7 @@ package cl.cadcc.ramitos.model
 
 import java.time.LocalDateTime
 import doobie.{TableDefinition, Column}
-import doobie.implicits.javatimedrivernative._
+import doobie.postgres.implicits._
 import cl.cadcc.ramitos.schema.{Account => SchemaAccount, AccountRole => SchemaRole}
 import cl.cadcc.ramitos.utils.Shapeless._
 import cats.mtl.Local
