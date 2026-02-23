@@ -3,7 +3,7 @@ package cl.cadcc.ramitos.model
 import java.time.LocalDateTime
 import doobie.{TableDefinition, Column, ConnectionIO}
 import doobie.syntax.all._
-import doobie.implicits.javatimedrivernative._
+import doobie.postgres.implicits._
 import java.util.Optional
 import cats.data.NonEmptyVector
 import doobie.WithSQLDefinition
