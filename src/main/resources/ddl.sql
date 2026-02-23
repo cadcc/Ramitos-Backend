@@ -25,20 +25,20 @@ CREATE TABLE ucampus_sso(
 CREATE TABLE courses(
     code VARCHAR(20) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    difficulty FLOAT,
+    difficulty FLOAT NOT NULL DEFAULT 'NaN',
     difficulty_count INTEGER NOT NULL DEFAULT 0,
     difficulty_sum BIGINT NOT NULL DEFAULT 0,
-    load FLOAT,
+    load FLOAT NOT NULL DEFAULT 'NaN',
     load_count INTEGER NOT NULL DEFAULT 0,
     load_sum BIGINT NOT NULL DEFAULT 0,
-    utility FLOAT,
+    utility FLOAT NOT NULL DEFAULT 'NaN',
     utility_count INTEGER NOT NULL DEFAULT 0,
     utility_sum BIGINT NOT NULL DEFAULT 0,
-    interest FLOAT,
+    interest FLOAT NOT NULL DEFAULT 'NaN',
     interest_count INTEGER NOT NULL DEFAULT 0,
     interest_sum BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE reviews(
