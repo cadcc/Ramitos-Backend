@@ -46,9 +46,9 @@ CREATE TABLE reviews(
     account_id INTEGER REFERENCES accounts(id),
     course_code VARCHAR(20) NOT NULL REFERENCES courses(code),
     comments TEXT NOT NULL,
-    difficulty FLOAT,
-    load FLOAT,
-    utility FLOAT,
-    interest FLOAT,
+    difficulty INT,
+    load INT,
+    utility INT,
+    interest INT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

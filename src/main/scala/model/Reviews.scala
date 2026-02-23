@@ -1,19 +1,18 @@
 package cl.cadcc.ramitos.model
 
-import doobie.TableDefinition
-import doobie.Column
-import doobie.WithSQLDefinition
-import doobie.Composite
+import doobie._, doobie.postgres.implicits._
+import java.time.Instant
 
 case class Review(
     id: Int,
     accountId: Int,
     courseCode: String,
     comments: String,
-    difficulty: Option[Float],
-    load: Option[Float],
-    utility: Option[Float],
-    interest: Option[Float]
+    difficulty: Option[Int],
+    load: Option[Int],
+    utility: Option[Int],
+    interest: Option[Int],
+    createdAt: Instant
 )
 
 object Review {
@@ -22,10 +21,11 @@ object Review {
         val accountId: Column[Int] = Column("account_id")
         val courseCode: Column[String] = Column("course_code")
         val comments: Column[String] = Column("comments")
-        val difficulty: Column[Option[Float]] = Column("difficulty")
-        val load: Column[Option[Float]] = Column("load")
-        val utility: Column[Option[Float]] = Column("utility")
-        val interest: Column[Option[Float]] = Column("interest")
+        val difficulty: Column[Option[Int]] = Column("difficulty")
+        val load: Column[Option[Int]] = Column("load")
+        val utility: Column[Option[Int]] = Column("utility")
+        val interest: Column[Option[Int]] = Column("interest")
+        val createdAt: Column[Instant] = Column("created_at")
 
         object all extends WithSQLDefinition[Review](Composite((
             id.sqlDef,
@@ -35,7 +35,8 @@ object Review {
             difficulty.sqlDef,
             load.sqlDef,
             utility.sqlDef,
-            interest.sqlDef
+            interest.sqlDef,
+            createdAt.sqlDef
         ))(Review.apply)(Tuple.fromProductTyped)) with TableDefinition.RowHelpers[Review](this)
     }
 }
