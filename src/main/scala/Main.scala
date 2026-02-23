@@ -19,6 +19,7 @@ import cats.MonadThrow
 import cl.cadcc.ramitos.schema.NotAuthenticated
 import org.http4s.headers.`WWW-Authenticate`
 import cats.data.NonEmptyList
+import org.http4s.ember.client.EmberClientBuilder
 
 object Main extends IOApp {
     val logging = Slf4jFactory.create[IO]
@@ -28,7 +29,8 @@ object Main extends IOApp {
         for {
             xa <- getTransactor
             auth <- AuthMiddleware.apply.toResource
-        } yield RamitosContext(xa, (), auth, logging)
+            client <- EmberClientBuilder.default[IO].build
+        } yield RamitosContext(xa, (), auth, logging, client)
 
     override def run(args: List[String]): IO[ExitCode] =
         resources.flatMap {rctx =>
