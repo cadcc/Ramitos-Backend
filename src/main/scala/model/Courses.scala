@@ -1,25 +1,79 @@
 package cl.cadcc.ramitos.model
 
 import java.time.LocalDateTime
+import cats.syntax.all._
 import doobie.{TableDefinition, Column}
 import doobie.implicits.javatimedrivernative._
+import doobie.WithSQLDefinition
+import doobie.Composite
 
-object CoursesTable extends TableDefinition("courses"):
-    val code: Column[String] = Column("code")
-    val displayName: Column[String] = Column("name")
 
-    val difficulty: Column[Float]    = Column("difficulty")
-    val difficultyCount: Column[Int] = Column("difficulty_count")
-    val difficultySum: Column[Long]  = Column("difficulty_sum")
+case class CourseStat(rate: Float, count: Int, sum: Long)
+case class Course(
+    code: String,
+    name: String,
+    difficulty: CourseStat,
+    load: CourseStat,
+    utility: CourseStat,
+    interest: CourseStat
+)
 
-    val load: Column[Float]    = Column("load")
-    val loadCount: Column[Int] = Column("load_count")
-    val loadSum: Column[Long]  = Column("load_sum")
+object Course {
+    object Table extends TableDefinition("courses") {
+        lazy val columns = Composite(all)
+        lazy val columnNames = all.columns.map(_.rawName).toVector
 
-    val utility: Column[Float]    = Column("utility")
-    val utilityCount: Column[Int] = Column("utility_count")
-    val utilitySum: Column[Long]  = Column("utility_sum")
+        val code: Column[String] = Column("code")
+        val displayName: Column[String] = Column("name")
 
-    val interest: Column[Float]    = Column("interest")
-    val interestCount: Column[Int] = Column("interest_count")
-    val interestSum: Column[Long]  = Column("interest_sum")
+        val difficulty: Column[Float]    = Column("difficulty")
+        val difficultyCount: Column[Int] = Column("difficulty_count")
+        val difficultySum: Column[Long]  = Column("difficulty_sum")
+
+        val load: Column[Float]    = Column("load")
+        val loadCount: Column[Int] = Column("load_count")
+        val loadSum: Column[Long]  = Column("load_sum")
+
+        val utility: Column[Float]    = Column("utility")
+        val utilityCount: Column[Int] = Column("utility_count")
+        val utilitySum: Column[Long]  = Column("utility_sum")
+
+        val interest: Column[Float]    = Column("interest")
+        val interestCount: Column[Int] = Column("interest_count")
+        val interestSum: Column[Long]  = Column("interest_sum")
+
+        object DifficultyStat extends WithSQLDefinition[CourseStat](Composite((
+            difficulty.sqlDef,
+            difficultyCount.sqlDef,
+            difficultySum.sqlDef
+        ))(CourseStat.apply)(Tuple.fromProductTyped))
+
+        object LoadStat extends WithSQLDefinition[CourseStat](Composite((
+            load.sqlDef,
+            loadCount.sqlDef,
+            loadSum.sqlDef
+        ))(CourseStat.apply)(Tuple.fromProductTyped))
+
+        object UtilityStat extends WithSQLDefinition[CourseStat](Composite((
+            utility.sqlDef,
+            utilityCount.sqlDef,
+            utilitySum.sqlDef
+        ))(CourseStat.apply)(Tuple.fromProductTyped))
+
+        object InterestStat extends WithSQLDefinition[CourseStat](Composite((
+            interest.sqlDef,
+            interestCount.sqlDef,
+            interestSum.sqlDef
+        ))(CourseStat.apply)(Tuple.fromProductTyped))
+
+        object all extends WithSQLDefinition[Course](Composite((
+            code.sqlDef,
+            displayName.sqlDef,
+            DifficultyStat.sqlDef,
+            LoadStat.sqlDef,
+            UtilityStat.sqlDef,
+            InterestStat.sqlDef
+        ))(Course.apply)(Tuple.fromProductTyped)) with TableDefinition.RowHelpers[Course](this)
+    }
+}
+
