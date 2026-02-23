@@ -38,4 +38,5 @@ object RamitosContext {
         ).pure)
     
     given transactorFromContext[F[_]](using ctx: RamitosContext[F]): Transactor[F] = ctx.xa
+    given clientFromContext[F[_]](using ctx: RamitosContext[F]): Client[F] = ctx.httpClient
 }
