@@ -3,22 +3,42 @@ package cl.cadcc.ramitos.model
 import java.time.LocalDateTime
 import cats.syntax.all._
 import doobie.{TableDefinition, Column}
-import doobie.implicits.javatimedrivernative._
+import doobie.postgres.implicits._
 import doobie.WithSQLDefinition
 import doobie.Composite
+import doobie.util.{Read, Write}
+import doobie.SQLDefinition
+import java.time.Instant
 
 
-case class CourseStat(rate: Float, count: Int, sum: Long)
+enum Stat {
+    case Difficulty
+    case Load
+    case Utility
+    case Interest
+}
+
+case class CourseStat(rate: Float, count: Int, sum: Long) derives Read, Write
 case class Course(
     code: String,
     name: String,
     difficulty: CourseStat,
     load: CourseStat,
     utility: CourseStat,
-    interest: CourseStat
-)
+    interest: CourseStat,
+    createdAt: Instant,
+    updatedAt: Instant
+) derives Read, Write {
+    def getStat(stat: Stat) =
+        stat match
+            case Stat.Difficulty => this.difficulty
+            case Stat.Interest => this.interest
+            case Stat.Load => this.load
+            case Stat.Utility => this.utility
+}
 
 object Course {
+
     object Table extends TableDefinition("courses") {
         lazy val columns = Composite(all)
         lazy val columnNames = all.columns.map(_.rawName).toVector
@@ -41,6 +61,15 @@ object Course {
         val interest: Column[Float]    = Column("interest")
         val interestCount: Column[Int] = Column("interest_count")
         val interestSum: Column[Long]  = Column("interest_sum")
+
+        val createdAt: Column[Instant] = Column("createdAt")
+        val updatedAt: Column[Instant] = Column("updated_at")
+
+        def getStat(stat: Stat): SQLDefinition[CourseStat] = stat match
+            case Stat.Difficulty => DifficultyStat
+            case Stat.Load => LoadStat
+            case Stat.Utility => UtilityStat
+            case Stat.Interest => InterestStat
 
         object DifficultyStat extends WithSQLDefinition[CourseStat](Composite((
             difficulty.sqlDef,
@@ -72,7 +101,9 @@ object Course {
             DifficultyStat.sqlDef,
             LoadStat.sqlDef,
             UtilityStat.sqlDef,
-            InterestStat.sqlDef
+            InterestStat.sqlDef,
+            createdAt.sqlDef,
+            updatedAt.sqlDef
         ))(Course.apply)(Tuple.fromProductTyped)) with TableDefinition.RowHelpers[Course](this)
     }
 }
