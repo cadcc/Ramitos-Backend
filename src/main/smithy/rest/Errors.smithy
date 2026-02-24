@@ -12,5 +12,9 @@ structure NotAuthenticated {
 }
 
 @error("client")
+@httpError(404)
+structure NotFound {}
+
+@error("client")
 @httpError(403)
 structure InsufficientPermissions {}

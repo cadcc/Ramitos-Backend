@@ -16,13 +16,15 @@ operation ListCourses {
   input := {
     @httpQuery("limit")
     @range(min: 1, max: 50)
+    @default(50)
     limit: Long
 
     @httpQuery("after")
-    after: Long
+    after: String
   }
   output := {
     @httpPayload
+    @required
     content: Courses
   }
 }
