@@ -56,6 +56,8 @@ lazy val root = project
       "org.scalameta" %% "munit" % "1.0.0" % Test,
     ),
 
+    scalacOptions ++= Seq("-Wvalue-discard", "-Wnonunit-statement", "-feature"),
+
     smithy4sAllowedNamespaces := List("cl.cadcc.ramitos.schema"),
     Compile / smithy4sInputDirs := List((ThisBuild / baseDirectory).value / "src" / "main" / "smithy"),
   )

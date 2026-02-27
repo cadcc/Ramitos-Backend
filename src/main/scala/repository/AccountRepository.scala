@@ -6,6 +6,7 @@ import cl.cadcc.ramitos.model.Account
 import cl.cadcc.ramitos.model.AccountRole
 import scala.collection.mutable.ListBuffer
 import java.time._
+import scala.language.implicitConversions
 
 object AccountRepository {
     val Table = Account.Table

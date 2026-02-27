@@ -6,6 +6,7 @@ import cl.cadcc.ramitos.model.Password
 import java.time.LocalDateTime
 import scala.collection.mutable.ListBuffer
 import cats.data.NonEmptyVector
+import scala.language.implicitConversions
 
 object PasswordRepository {
     val Table = Password.Table

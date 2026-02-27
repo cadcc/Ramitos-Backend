@@ -10,6 +10,7 @@ import cats.data.OptionT
 import cats.effect.kernel.Sync
 import cl.cadcc.ramitos.model.CourseStat
 import java.time.Instant
+import scala.language.implicitConversions
 
 object CourseRepository {
     private val Table = Course.Table
