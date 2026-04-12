@@ -12,7 +12,6 @@ import cl.cadcc.ramitos.RamitosContext.given
 import smithy4s.Service
 import cats.effect.Concurrent
 import cl.cadcc.ramitos.routes.Authentication.AuthenticationImpl
-import cl.cadcc.ramitos.implicits._
 import org.typelevel.log4cats.LoggerFactory
 
 private def makeRoutes[Alg[_[_,_,_,_,_]], F[_]](impl: FunctorAlgebra[Alg, F])(using ctx: RamitosContext[F])(using Service[Alg], Concurrent[F]) =

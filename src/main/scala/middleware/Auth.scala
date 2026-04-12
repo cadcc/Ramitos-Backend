@@ -1,10 +1,10 @@
 package cl.cadcc.ramitos.middleware
 
-import cl.cadcc.ramitos.utils.extensions._
-import cats.syntax.all._
+import cl.cadcc.ramitos.utils.extensions.*
+import cats.syntax.all.*
 import cats.effect.IO
 import cats.effect.IOLocal
-import cl.cadcc.ramitos.utils._
+import cl.cadcc.ramitos.utils.*
 import cats.mtl.Local
 import smithy4s.http4s.ServerEndpointMiddleware
 import smithy4s.Hints
@@ -15,7 +15,7 @@ import org.http4s.HttpApp
 import cats.mtl.Ask
 import smithy.api.HttpBearerAuth
 import smithy.api.Auth
-import cats.MonadThrow
+import cats.{Applicative, MonadThrow, Show}
 import cats.effect.Clock
 import org.http4s.headers.Authorization
 import org.http4s.Credentials
@@ -24,14 +24,18 @@ import cl.cadcc.ramitos.JwtTokens
 import cl.cadcc.ramitos.model.Account
 import io.circe.Codec
 import cl.cadcc.ramitos.schema.NotAuthenticated
+
 import scala.util.Failure
 import scala.util.Success
 import cl.cadcc.ramitos.JwtJsonException
-import org.http4s._, org.http4s.dsl.io._, org.http4s.implicits._, org.http4s.circe._
-import io.circe.generic.auto._, io.circe.syntax._
+import org.http4s.*
+import org.http4s.dsl.io.*
+import org.http4s.implicits.*
+import org.http4s.circe.*
+import io.circe.generic.auto.*
+import io.circe.syntax.*
 import cats.data.NonEmptyList
 import org.http4s.headers.`WWW-Authenticate`
-import cats.Applicative
 import io.circe.Json
 import org.http4s.dsl.impl.Responses.UnauthorizedOps
 import cl.cadcc.ramitos.JwtValidationException
@@ -54,18 +58,18 @@ object AuthMiddleware {
 
     type AskSession = Ask[IO, T]
 
-    def apply: IO[AuthMiddleware[IO, T]] =
+    def ofJwtTokens(using JwtTokens[IO, T]): IO[AuthMiddleware[IO, T]] =
         for {
             local <- IOLocal(None : Option[T])
         } yield AuthMiddlewareImpl[IO](local.asLocal)
 
-    private class AuthMiddlewareImpl[F[_]](using MonadThrow[F], Clock[F])(private val localSession: Local[F, Option[T]]) extends AuthMiddleware[F, T] {
+    private class AuthMiddlewareImpl[F[_]](using MonadThrow[F], Clock[F], JwtTokens[F, T])(private val localSession: Local[F, Option[T]]) extends AuthMiddleware[F, T] {
         val askSession: Ask[F, T] = localSession.toGetSome("Asked for a session outside of the context of an authenticated endpoint.")
 
         val middleware = AuthServerEndpointMiddlewareImpl(localSession)
     }
 
-    private class AuthServerEndpointMiddlewareImpl[F[_]](using MonadThrow[F], Clock[F])(val localSession: Local[F, Option[T]]) extends ServerEndpointMiddleware.Simple[F] {
+    private class AuthServerEndpointMiddlewareImpl[F[_]](using MonadThrow[F], Clock[F], JwtTokens[F, T])(val localSession: Local[F, Option[T]]) extends ServerEndpointMiddleware.Simple[F] {
         import cats.effect.{IO => _}
         def prepareWithHints(serviceHints: Hints, endpointHints: Hints): HttpApp[F] => HttpApp[F] =
             serviceHints.get[HttpBearerAuth] match {

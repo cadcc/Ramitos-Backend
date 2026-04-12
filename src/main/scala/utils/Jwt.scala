@@ -37,16 +37,15 @@ object JwtTokens {
 
     def apply[F[_], E](using ev: JwtTokens[F, E]) = ev
 
-    given fromClock[F[_], E](using clk: Clock[F], codec: Codec[E]): JwtTokens[F, E] =
-        AccessTokensImpl[F, E](using clk, codec)
+    def ofClock[F[_], E](conf: JwtConfig)(using Clock[F], Codec[E]): JwtTokens[F, E] = JwtTokensImpl(conf)
 
-    private class AccessTokensImpl[F[_], E](using clk: Clock[F], codec: Codec[E]) extends JwtTokens[F, E] {
+    private class JwtTokensImpl[F[_], E](private val conf: JwtConfig)(using clk: Clock[F], codec: Codec[E]) extends JwtTokens[F, E] {
         given app: Applicative[F] = clk.applicative
 
-        private val secretKey = "insecure-must-change!"
+        private val secretKey = conf.secretKey
         private val algo = JwtAlgorithm.HS256
-        private val accessExpirity = (30*60).seconds
-        private val leeway = 1.seconds
+        private val accessExpirity = conf.accessTokenLifeSeconds.seconds
+        private val leeway = conf.leewaySeconds.seconds
         
         private val jwtOptions: JwtOptions = JwtOptions(
             signature = true,

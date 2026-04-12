@@ -1,36 +1,63 @@
 package cl.cadcc.ramitos
 
-import org.http4s._, org.http4s.dsl.io._, org.http4s.implicits._, org.http4s.circe._
-import io.circe.generic.auto._, io.circe.syntax._
-import cats.effect.{IO, IOApp}
-import org.typelevel.log4cats.LoggerFactory
-import org.typelevel.log4cats.slf4j.Slf4jFactory
-import cl.cadcc.ramitos.routes.restRoutes
-import cats.effect.ExitCode
-import org.http4s.ember.server.EmberServerBuilder
-import com.comcast.ip4s.{port, host}
-import cats.effect.Resource
-import cl.cadcc.ramitos.RamitosContext.getTransactor
-import doobie.util.transactor.Transactor
+import cats.*
+import cats.data.NonEmptyList
+import cats.effect.*
+import cats.effect.std.SystemProperties
+import cats.syntax.all.*
 import cl.cadcc.ramitos.middleware.AuthMiddleware
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
-import cats.mtl.syntax.raise
-import cats.MonadThrow
+import cl.cadcc.ramitos.routes.restRoutes
 import cl.cadcc.ramitos.schema.NotAuthenticated
-import org.http4s.headers.`WWW-Authenticate`
-import cats.data.NonEmptyList
+import cl.cadcc.ramitos.utils.Crypto
+import com.zaxxer.hikari.HikariConfig as HikariConfiguration
+import doobie.hikari.HikariTransactor
+import doobie.util.transactor.Transactor
+import io.circe.generic.auto.*
+import io.circe.syntax.*
+import org.http4s.*
+import org.http4s.circe.*
+import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
+import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.headers.`WWW-Authenticate`
+import org.http4s.implicits.*
+import org.postgresql.ds.PGSimpleDataSource
+import org.typelevel.log4cats.LoggerFactory
+import org.typelevel.log4cats.slf4j.Slf4jFactory
 
 object Main extends IOApp {
-    val logging = Slf4jFactory.create[IO]
-    val mainLogger = logging.getLogger
+    given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
+    private val mainLogger = logging.getLogger
+
+    private def getTransactor(config: DbConfig): Resource[IO, Transactor[IO]] =
+        val datasource = PGSimpleDataSource()
+        datasource.setServerNames(Array(config.host.show))
+        datasource.setPortNumbers(Array(config.port.value))
+        datasource.setUser(config.credentials.username)
+        datasource.setPassword(config.credentials.password)
+        datasource.setDatabaseName(config.credentials.database)
+        
+        val hikari = HikariConfiguration()
+        hikari.setDataSource(datasource)
+
+        config.hikari.idleTimeoutMillis.foreach( hikari.setIdleTimeout )
+        config.hikari.maxLifetimeMillis.foreach( hikari.setMaxLifetime )
+        config.hikari.maximumPoolSize  .foreach( hikari.setMaximumPoolSize )
+        config.hikari.minimumIdleMillis.foreach( hikari.setMinimumIdle )
+        
+        HikariTransactor.fromHikariConfig(hikari)
     
     private val resources: Resource[IO, RamitosContext[IO]] =
         for {
-            xa <- getTransactor
-            auth <- AuthMiddleware.apply.toResource
+            configFile <- SystemProperties[IO].get("ramitos.configFile").toResource
+            conf <- RamitosConfig.load[IO](configFile).toResource
+            xa <- getTransactor(conf.db)
+            crypto <- Crypto.ofConf(conf.auth.bcrypt).pure[ResourceIO]
+            jwt <- JwtTokens.ofClock[IO, Session](conf.auth.jwt).pure[ResourceIO]
+            auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
             client <- EmberClientBuilder.default[IO].build
-        } yield RamitosContext(xa, (), auth, logging, client)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt)
 
     override def run(args: List[String]): IO[ExitCode] =
         resources.flatMap {rctx =>
@@ -39,8 +66,8 @@ object Main extends IOApp {
             for {
                 routes <- restRoutes
                 server <- EmberServerBuilder.default[IO]
-                    .withPort(port"8000")
-                    .withHost(host"localhost")
+                    .withHost(ctx.config.http.host)
+                    .withPort(ctx.config.http.port)
                     .withHttpApp(routes.orNotFound)
                     .withErrorHandler({
                         case e @ NotAuthenticated(reason, message) =>

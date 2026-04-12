@@ -7,7 +7,6 @@ import doobie.implicits._, cats.implicits._, cats.effect.implicits._
 import cats.effect.kernel.Clock
 import cl.cadcc.ramitos.schema.AuthenticationService
 import cl.cadcc.ramitos.schema.SessionTokens
-import cl.cadcc.ramitos.utils.Crypto.crypto
 import cats.MonadThrow
 import cl.cadcc.ramitos.utils.Crypto
 import doobie.util.transactor.Transactor
@@ -22,7 +21,7 @@ import cl.cadcc.ramitos.JwtTokens
 import cl.cadcc.ramitos.repository.PasswordRepository
 
 object Authentication {
-    class AuthenticationImpl[F[_]](using Clock[F], MonadCancelThrow[F])(using xa: Transactor[F]) extends AuthenticationService[F] {
+    class AuthenticationImpl[F[_]](using xa: Transactor[F], crypto: Crypto)(using Clock[F], MonadCancelThrow[F], JwtTokens[F, Session]) extends AuthenticationService[F] {
         def passwordLogin(username: String, password: String): F[SessionTokens] =
             for {
                 credsOpt <- PasswordRepository.getByUsername(username).transact(xa)

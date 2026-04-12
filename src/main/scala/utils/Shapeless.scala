@@ -3,8 +3,9 @@ package cl.cadcc.ramitos.utils
 import scala.deriving.Mirror
 import scala.Tuple.:*
 import smithy4s.time.Timestamp
+
 import java.time.{Instant, LocalDateTime, ZoneOffset}
-import fs2.compat.NotGiven
+import scala.util.NotGiven
 
 object Shapeless {
 

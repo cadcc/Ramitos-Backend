@@ -4,6 +4,7 @@ import com.password4j.Hash
 import com.password4j.Password
 import com.password4j.HashingFunction
 import com.password4j.BcryptFunction
+import cl.cadcc.ramitos.BcryptConfig
 
 
 trait Crypto {
@@ -13,20 +14,23 @@ trait Crypto {
 
 object Crypto {
 
-    def apply(using ev: Crypto) = ev
-
-    given crypto: Crypto = CryptoImpl
+    def ofConf(bcrypt: BcryptConfig): Crypto =
+        CryptoImpl(bcrypt.rounds, bcrypt.pepper.getOrElse(""))
     
-    private object CryptoImpl extends Crypto {
+    private class CryptoImpl(rounds: Int, pepper: String) extends Crypto {
+
+        private val hf: HashingFunction = BcryptFunction.getInstance(rounds)
+
         def hashPassword(password: String): String =
             val hash: Hash = Password.hash(password)
                 .addRandomSalt(25)
-                .withBcrypt()
+                .addPepper(pepper)
+                .`with`(hf)
             
             hash.getResult()
 
         def verifyPassword(password: String, hash: String): Boolean =
             val hf: HashingFunction = BcryptFunction.getInstanceFromHash(hash)
-            Password.check(password, hash).`with`(hf)
+            Password.check(password, hash).addPepper(pepper).`with`(hf)
     }
 }

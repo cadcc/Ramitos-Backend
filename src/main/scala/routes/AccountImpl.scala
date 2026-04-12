@@ -20,7 +20,7 @@ import cl.cadcc.ramitos.model.AccountRole
 import cl.cadcc.ramitos.repository.PasswordRepository
 
 
-class AccountImpl[F[_]](session: Ask[F, Session])(using MonadCancelThrow[F], Clock[F], Transactor[F]) extends AccountService[F] {
+class AccountImpl[F[_]](session: Ask[F, Session])(using crypto: Crypto)(using MonadCancelThrow[F], Clock[F], Transactor[F]) extends AccountService[F] {
     private given Ask[F, Session] = session
 
     def getSelf(): F[SAccount] =
@@ -30,7 +30,7 @@ class AccountImpl[F[_]](session: Ask[F, Session])(using MonadCancelThrow[F], Clo
         minPermission(AccountRole.admin) *>
         (for {
             acc <- AccountRepository.create(name, role.toModel())
-            hash = Crypto.crypto.hashPassword(password)
+            hash = crypto.hashPassword(password)
             pass <- PasswordRepository.create(username, hash, acc.id)
         } yield acc)
             .transact(xa)
