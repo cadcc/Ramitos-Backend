@@ -27,7 +27,7 @@ class AccountImpl[F[_]](session: Ask[F, Session])(using crypto: Crypto)(using Mo
         session.ask.map(s => schemaConvert[Account, SAccount](s.account))
 
     def createAccount(username: String, password: String, role: SchemaRole, name: String): F[SAccount] =
-        minPermission(AccountRole.admin) *>
+        minPermission(AccountRole.ADMIN) *>
         (for {
             acc <- AccountRepository.create(name, role.toModel())
             hash = crypto.hashPassword(password)

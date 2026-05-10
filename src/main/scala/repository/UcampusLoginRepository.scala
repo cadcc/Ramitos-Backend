@@ -40,7 +40,7 @@ object UcampusLoginRepository {
 
     private def createWithAccount(ucampusUsername: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
         for {
-            acc <- AccountRepository.create(name, AccountRole.none)
+            acc <- AccountRepository.create(name, AccountRole.NONE)
             login <- create(ucampusUsername, acc.id)
         } yield (acc, login)
 }

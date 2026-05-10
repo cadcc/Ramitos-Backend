@@ -1,37 +1,45 @@
 package cl.cadcc.ramitos.model
 
+import cats.syntax.all.*
 import java.time.LocalDateTime
-import doobie.{TableDefinition, Column}
-import doobie.postgres.implicits._
-import cl.cadcc.ramitos.schema.{Account => SchemaAccount, AccountRole => SchemaRole}
-import cl.cadcc.ramitos.utils.Shapeless._
+import doobie.{Column, Columns, Composite, Meta, TableDefinition, WithSQLDefinition}
+import doobie.postgres.implicits.*
+import cl.cadcc.ramitos.schema.{Account as SchemaAccount, AccountRole as SchemaRole}
+import cl.cadcc.ramitos.utils.Shapeless.*
 import cats.mtl.Local
 import io.circe.Codec
 import doobie.util.{Get, Put, Read, Write}
+
 import scala.deriving.Mirror
 import cats.kernel.Order
-import doobie.WithSQLDefinition
-import doobie.Composite
-import doobie.Columns
 
 enum AccountRole(val s: String, val order: Int) derives Codec:
-    case none extends AccountRole("none", 0)
-    case stats extends AccountRole("stats", 1)
-    case mod extends AccountRole("mod", 2)
-    case admin extends AccountRole("admin", 3)
+    case NONE extends AccountRole("none", 0)
+    case STATS extends AccountRole("stats", 1)
+    case MOD extends AccountRole("mod", 2)
+    case ADMIN extends AccountRole("admin", 3)
 
-object AccountRole:
-    given Get[AccountRole] = Get.deriveEnumString[AccountRole]
-    given Put[AccountRole] = Put.deriveEnumString[AccountRole]
 
-given Ordering[AccountRole] = Ordering[Int].on[AccountRole](_.order)
-given Order[AccountRole] = Order.by(_.order)
+object AccountRole {
+    given Meta[AccountRole] = pgEnumStringOpt[AccountRole]("account_role", AccountRole.ofString, _.s)
+
+    def ofString(s: String) = s match {
+        case "none" => AccountRole.NONE.some
+        case "stats" => AccountRole.STATS.some
+        case "mod" => AccountRole.MOD.some
+        case "admin" => AccountRole.ADMIN.some
+        case _ => None
+    }
+    
+    given Ordering[AccountRole] = Ordering[Int].on[AccountRole](_.order)
+    given Order[AccountRole] = Order.by(_.order)
+}
 
 given mish: SchemaModelConvert[AccountRole, SchemaRole] = SchemaModelConvert.instance {
-    case AccountRole.none => SchemaRole.NONE
-    case AccountRole.stats => SchemaRole.STATS
-    case AccountRole.mod => SchemaRole.MOD
-    case AccountRole.admin => SchemaRole.ADMIN
+    case AccountRole.NONE => SchemaRole.NONE
+    case AccountRole.STATS => SchemaRole.STATS
+    case AccountRole.MOD => SchemaRole.MOD
+    case AccountRole.ADMIN => SchemaRole.ADMIN
 }
 
 case class Account(

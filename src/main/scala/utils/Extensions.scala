@@ -29,9 +29,9 @@ object extensions {
     
     extension (role: AccountRole)
         def toModel() = this match {
-            case AccountRole.NONE => ModelRole.none
-            case AccountRole.STATS => ModelRole.stats
-            case AccountRole.MOD => ModelRole.mod
-            case AccountRole.ADMIN => ModelRole.admin
+            case AccountRole.NONE  => ModelRole.NONE
+            case AccountRole.STATS => ModelRole.STATS
+            case AccountRole.MOD   => ModelRole.MOD
+            case AccountRole.ADMIN => ModelRole.ADMIN
         }
 }
