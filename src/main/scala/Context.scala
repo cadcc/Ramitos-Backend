@@ -1,27 +1,29 @@
 package cl.cadcc.ramitos
 
 import doobie.util.transactor.Transactor
-import cats.effect.syntax.all._
-import cats.effect.implicits._
+import cats.effect.syntax.all.*
+import cats.effect.implicits.*
 import cats.effect.IO
-import cats.implicits._
-import cats.syntax.all._
+import cats.implicits.*
+import cats.syntax.all.*
 import cats.effect.Resource
 import cats.mtl.Ask
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.middleware.AuthMiddleware
+import cl.cadcc.ramitos.repository.CourseRepository
 import org.typelevel.log4cats.LoggerFactory
 import org.http4s.client.Client
 import cl.cadcc.ramitos.utils.Crypto
 
 case class RamitosContext[F[_]](
-    val xa: Transactor[F],
-    val config: RamitosConfig,
-    val auth: AuthMiddleware[F, Session],
-    val logging: LoggerFactory[F],
-    val httpClient: Client[F],
-    val crypto: Crypto,
-    val jwt: JwtTokens[F, Session]
+    xa: Transactor[F],
+    config: RamitosConfig,
+    auth: AuthMiddleware[F, Session],
+    logging: LoggerFactory[F],
+    httpClient: Client[F],
+    crypto: Crypto,
+    jwt: JwtTokens[F, Session],
+    courseRepository: CourseRepository
 )
 
 object RamitosContext {
@@ -36,4 +38,5 @@ object RamitosContext {
     given clientFromContext[F[_]](using ctx: RamitosContext[F]): Client[F] = ctx.httpClient
     given jwtTokensFromContext[F[_]](using ctx: RamitosContext[F]): JwtTokens[F, Session] = ctx.jwt
     given cryptoFromContext[F[_]](using ctx: RamitosContext[F]): Crypto = ctx.crypto
+    given courseRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseRepository = ctx.courseRepository
 }

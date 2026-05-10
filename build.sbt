@@ -40,6 +40,7 @@ lazy val root = project
       // doobie
       "org.tpolecat" %% "doobie-core"     % doobieVersion,
       "org.tpolecat" %% "doobie-postgres" % doobieVersion,
+      "org.tpolecat" %% "doobie-postgres-circe" % doobieVersion,
       "org.tpolecat" %% "doobie-specs2"   % doobieVersion,
       "org.tpolecat" %% "doobie-hikari"   % doobieVersion,
       "org.postgresql" % "postgresql" % "42.7.10",

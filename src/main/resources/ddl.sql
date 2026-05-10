@@ -37,6 +37,7 @@ CREATE TABLE courses(
     interest FLOAT NOT NULL DEFAULT 'NaN',
     interest_count INTEGER NOT NULL DEFAULT 0,
     interest_sum BIGINT NOT NULL DEFAULT 0,
+    tag_stats JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -50,5 +51,6 @@ CREATE TABLE reviews(
     load INT,
     utility INT,
     interest INT,
+    tags JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

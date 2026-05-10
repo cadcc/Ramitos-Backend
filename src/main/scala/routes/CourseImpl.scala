@@ -9,7 +9,7 @@ import doobie.util.transactor.Transactor
 import cl.cadcc.ramitos.repository.CourseRepository
 import cats.data.OptionT
 
-class CourseImpl[F[_]](using MonadCancelThrow[F])(using xa: Transactor[F]) extends CourseService[F] {
+class CourseImpl[F[_] : MonadCancelThrow](using xa: Transactor[F], courseRepository: CourseRepository) extends CourseService[F] {
     private def modelToSchema(course: ModelCourse): Course =
         Course(
             id = course.code,
@@ -21,12 +21,12 @@ class CourseImpl[F[_]](using MonadCancelThrow[F])(using xa: Transactor[F]) exten
         )
 
     def getCourse(courseId: String): F[Course] =
-        OptionT(CourseRepository.getByCode(courseId).transact(xa))
+        OptionT(courseRepository.getByCode(courseId).transact(xa))
             .getOrRaise(new NotFound())
             .map(modelToSchema)
 
     def listCourses(limit: Long = 50, after: Option[String]): F[ListCoursesOutput] =
-        CourseRepository.list(limit, after)
+        courseRepository.list(limit, after)
             .map(modelToSchema)
             .compile
             .toList

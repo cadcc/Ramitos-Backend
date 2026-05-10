@@ -1,14 +1,17 @@
 package cl.cadcc.ramitos.model
 
 import java.time.LocalDateTime
-import cats.syntax.all._
-import doobie.{TableDefinition, Column}
-import doobie.postgres.implicits._
+import cats.syntax.all.*
+import doobie.{Column, TableDefinition}
+import doobie.postgres.implicits.*
 import doobie.WithSQLDefinition
 import doobie.Composite
 import doobie.util.{Read, Write}
 import doobie.SQLDefinition
+
 import java.time.Instant
+import cl.cadcc.ramitos.model.implicits.given
+import io.circe.{Codec, Json}
 
 
 enum Stat {
@@ -18,7 +21,7 @@ enum Stat {
     case Interest
 }
 
-case class CourseStat(rate: Float, count: Int, sum: Long) derives Read, Write
+case class CourseStat(rate: Float, count: Int, sum: Long) derives Read, Write, Codec
 case class Course(
     code: String,
     name: String,
@@ -26,6 +29,7 @@ case class Course(
     load: CourseStat,
     utility: CourseStat,
     interest: CourseStat,
+    tagStats: Map[String, CourseStat],
     createdAt: Instant,
     updatedAt: Instant
 ) derives Read, Write {
@@ -61,6 +65,8 @@ object Course {
         val interest: Column[Float]    = Column("interest")
         val interestCount: Column[Int] = Column("interest_count")
         val interestSum: Column[Long]  = Column("interest_sum")
+        
+        val tagStats: Column[Map[String, CourseStat]] = Column("tag_stats")
 
         val createdAt: Column[Instant] = Column("createdAt")
         val updatedAt: Column[Instant] = Column("updated_at")
@@ -102,9 +108,9 @@ object Course {
             LoadStat.sqlDef,
             UtilityStat.sqlDef,
             InterestStat.sqlDef,
+            tagStats.sqlDef,
             createdAt.sqlDef,
             updatedAt.sqlDef
         ))(Course.apply)(Tuple.fromProductTyped)) with TableDefinition.RowHelpers[Course](this)
     }
 }
-

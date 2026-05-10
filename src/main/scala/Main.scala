@@ -7,6 +7,7 @@ import cats.effect.std.SystemProperties
 import cats.syntax.all.*
 import cl.cadcc.ramitos.middleware.AuthMiddleware
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
+import cl.cadcc.ramitos.repository.CourseRepository
 import cl.cadcc.ramitos.routes.restRoutes
 import cl.cadcc.ramitos.schema.NotAuthenticated
 import cl.cadcc.ramitos.utils.Crypto
@@ -57,7 +58,8 @@ object Main extends IOApp {
             jwt <- JwtTokens.ofClock[IO, Session](conf.auth.jwt).pure[ResourceIO]
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
             client <- EmberClientBuilder.default[IO].build
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt)
+            courseRepository = CourseRepository.ofConf(conf.app.tags)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository)
 
     override def run(args: List[String]): IO[ExitCode] =
         resources.flatMap {rctx =>

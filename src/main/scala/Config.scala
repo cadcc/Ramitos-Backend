@@ -1,11 +1,13 @@
 package  cl.cadcc.ramitos
 
+import cats.MonadError
+import cats.syntax.all.*
 import cats.effect.{IO, Sync}
 import com.comcast.ip4s.{Host, Port}
 import org.http4s.Uri
 import org.typelevel.log4cats.LoggerFactory
 import pureconfig.*
-import pureconfig.error.ConfigReaderFailures
+import pureconfig.error.{ConfigReaderFailures, ConvertFailure, UserValidationFailed}
 import pureconfig.generic.derivation.*
 import pureconfig.module.catseffect.syntax.*
 import pureconfig.module.http4s.*
@@ -66,17 +68,62 @@ case class MufasaConfig(
     token: String
 ) derives ConfigReader
 
-case class LogConfig(
-    level: Map[String, String]
-)
+sealed trait TagSetting
+case class SingleTag(id: String) extends TagSetting
+case class ExclusiveSet(ex: Set[String]) extends TagSetting derives ConfigReader
+
+given ConfigReader[TagSetting] = ConfigReader.fromCursor { cursor =>
+    val F = MonadError[ConfigReader.Result, ConfigReaderFailures]
+    val keys = Map(
+        "ex" -> ExclusiveSet.apply
+    )
+    val singleTag = cursor.asString.map(SingleTag.apply)
+    val set =
+        for {
+            obj <- cursor.asObjectCursor
+            _ <- F.raiseWhen(obj.keys.size != 1)(
+                ConfigReaderFailures(ConvertFailure(UserValidationFailed("A TagSetting must have at most 1 key, or be a String."), obj)))
+            key = obj.keys.last
+            app <- keys.get(key).toRight(
+                ConfigReaderFailures(ConvertFailure(UserValidationFailed(s"Unknown tag set, available tag sets are: $keys"), obj)))
+            keyCursor <- obj.atKey(key)
+            listCursor <- keyCursor.asList
+            list <- listCursor.traverse(_.asString)
+        } yield app(list.toSet)
+    singleTag orElse set
+}
+
+case class TagSettings(settings: Seq[TagSetting]) {
+    val allTags: Set[String] = settings.flatMap {
+        case SingleTag(id) => Seq(id)
+        case ExclusiveSet(ids) => ids
+    }.toSet
+
+    val definitions: Map[String, TagSetting] = settings.flatMap {
+        case setting @ SingleTag(id)     => Set(id -> setting)
+        case setting @ ExclusiveSet(set) => set.map(id => id -> setting)
+    }.toMap
+}
+
+given ConfigReader[TagSettings] = ConfigReader[List[TagSetting]].emap { settings =>
+    val allSet = settings.flatMap {
+        case SingleTag(id) => List(id)
+        case ExclusiveSet(ids) => ids.toList
+    }
+    if allSet.distinct.size == allSet.size then TagSettings(settings).asRight
+    else UserValidationFailed("All tags in the settings must be unique.").asLeft
+}
+
+case class AppConfig(
+    tags: TagSettings
+) derives ConfigReader
 
 case class RamitosConfig(
     http: HttpConfig,
     db: DbConfig,
     auth: AuthConfig,
     mufasa: MufasaConfig,
-    cfg: Map[String, String],
-    logging: LogConfig
+    app: AppConfig
 ) derives ConfigReader
 
 object RamitosConfig {
@@ -88,22 +135,4 @@ object RamitosConfig {
             case None    => source.loadF()
         }
     }
-
-    // Source - https://stackoverflow.com/a/64400919
-    // Posted by Matthias Berndt
-    // Retrieved 2026-02-28, License - CC BY-SA 4.0
-    implicit val strMapReader: ConfigReader[Map[String, String]] = {
-        implicit val r: ConfigReader[String => Map[String, String]] =
-            ConfigReader[String]
-              .map(v => (prefix: String) => Map(prefix -> v))
-              .orElse {
-                  strMapReader.map { v =>
-                      (prefix: String) => v.map { case (k, v2) => s"$prefix.$k" -> v2 }
-                  }
-              }
-        ConfigReader[Map[String, String => Map[String, String]]].map {
-            _.flatMap { case (prefix, v) => v(prefix) }
-        }
-    }
-    // end of copied code
 }
