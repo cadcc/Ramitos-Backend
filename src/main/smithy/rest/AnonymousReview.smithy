@@ -43,12 +43,22 @@ structure AnonymousReview {
   @length(min: 20, max: 1000)
   comment: String
 
-  difficulty: Float
-  load: Float
-  utility: Float
-  interest: Float
+  dificultad: Float
+  docencia: Float
+  vibes: Float
+  carga: Float
+  relevancia: Float
 
-  
+
 
   created_at: Timestamp
+}
+
+map AnonymousReviewTags {
+  key: String
+  value: ReviewTag
+}
+
+structure ReviewTag {
+  
 }
