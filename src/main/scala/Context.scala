@@ -14,6 +14,7 @@ import cl.cadcc.ramitos.repository.CourseRepository
 import org.typelevel.log4cats.LoggerFactory
 import org.http4s.client.Client
 import cl.cadcc.ramitos.utils.Crypto
+import cl.cadcc.ramitos.utils.DccPortal
 
 case class RamitosContext[F[_]](
     xa: Transactor[F],
@@ -23,7 +24,8 @@ case class RamitosContext[F[_]](
     httpClient: Client[F],
     crypto: Crypto,
     jwt: JwtTokens[F, Session],
-    courseRepository: CourseRepository
+    courseRepository: CourseRepository,
+    dccPortal: DccPortal[F],
 )
 
 object RamitosContext {
@@ -34,9 +36,11 @@ object RamitosContext {
     def logging[F[_]](using ev: RamitosContext[F]): LoggerFactory[F] = ev.logging
     def httpClient[F[_]](using ev: RamitosContext[F]): Client[F] = ev.httpClient
     
+    given loggingFromContext[F[_]](using ctx: RamitosContext[F]): LoggerFactory[F] = ctx.logging
     given transactorFromContext[F[_]](using ctx: RamitosContext[F]): Transactor[F] = ctx.xa
     given clientFromContext[F[_]](using ctx: RamitosContext[F]): Client[F] = ctx.httpClient
     given jwtTokensFromContext[F[_]](using ctx: RamitosContext[F]): JwtTokens[F, Session] = ctx.jwt
     given cryptoFromContext[F[_]](using ctx: RamitosContext[F]): Crypto = ctx.crypto
     given courseRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseRepository = ctx.courseRepository
+    given dccPortalFromContext[F[_]](using ctx: RamitosContext[F]): DccPortal[F] = ctx.dccPortal
 }

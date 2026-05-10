@@ -34,7 +34,7 @@ object UcampusLoginRepository {
                     OptionT(AccountRepository.getById(login.accountId))
                         .map { acc => (acc, login) }
                         .getOrRaise( new Exception("not found") )
-                case None => createWithAccount(ucampusUsername, name).map { (acc, login) => (acc, login) }
+                case None => createWithAccount(ucampusUsername, name)
             }
         } yield accLogin
 

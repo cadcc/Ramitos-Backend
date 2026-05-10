@@ -11,6 +11,7 @@ import cl.cadcc.ramitos.repository.CourseRepository
 import cl.cadcc.ramitos.routes.restRoutes
 import cl.cadcc.ramitos.schema.NotAuthenticated
 import cl.cadcc.ramitos.utils.Crypto
+import cl.cadcc.ramitos.utils.DccPortal
 import com.zaxxer.hikari.HikariConfig as HikariConfiguration
 import doobie.hikari.HikariTransactor
 import doobie.util.transactor.Transactor
@@ -26,6 +27,7 @@ import org.http4s.implicits.*
 import org.postgresql.ds.PGSimpleDataSource
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
+import doobie.util.log.LogHandler
 
 object Main extends IOApp {
     given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
@@ -59,7 +61,8 @@ object Main extends IOApp {
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
             client <- EmberClientBuilder.default[IO].build
             courseRepository = CourseRepository.ofConf(conf.app.tags)
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository)
+            dccPortal = DccPortal.ofConcurrent(client, conf.auth.dccLogin)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, dccPortal)
 
     override def run(args: List[String]): IO[ExitCode] =
         resources.flatMap {rctx =>

@@ -13,8 +13,10 @@ object AccountRepository {
 
     def create(displayName: String, role: AccountRole): ConnectionIO[Account] =
         Table.insertInto(
-            Table.displayName --> displayName,
-            Table.role --> role
+            NonEmptySeq.of(
+                Table.displayName --> displayName,
+                Table.role --> role
+            )
         )
             .update
             .withUniqueGeneratedKeys(Table.columnNames*)
