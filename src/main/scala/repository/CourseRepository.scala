@@ -8,9 +8,8 @@ import doobie.implicits.*
 import fs2.Stream
 import cl.cadcc.ramitos.model.Course
 import cl.cadcc.ramitos.model.Stat
-import cats.effect.kernel.MonadCancel
-import cats.data.OptionT
-import cats.effect.kernel.Sync
+import cats.effect.{Clock, MonadCancel, Sync}
+import cats.data.{NonEmptyVector, OptionT}
 import cl.cadcc.ramitos.TagSettings
 import cl.cadcc.ramitos.model.CourseStat
 
@@ -21,7 +20,7 @@ trait CourseRepository {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
     def list(limit: Long, from: Option[String]): Stream[ConnectionIO, Course]
     def create(code: String, name: String): ConnectionIO[Course]
-    def updateStat(code: String, stat: Stat, newVal: CourseStat, now: Instant): ConnectionIO[Boolean]
+    def updateStats(code: String, stats: Map[Stat, CourseStat]): ConnectionIO[Boolean]
 }
 
 object CourseRepository {
@@ -31,6 +30,7 @@ object CourseRepository {
     def ofConf(tagSettings: TagSettings): CourseRepository = CourseRepositoryImpl(tagSettings)
 
     private class CourseRepositoryImpl(private val tagSettings: TagSettings) extends CourseRepository {
+        private val F = WeakAsync[ConnectionIO]
         private val Table = Course.Table
         private val tagsList: List[String] = tagSettings.allTags.toList
 
@@ -58,40 +58,25 @@ object CourseRepository {
                     tagName -> CourseStat(Float.NaN, 0, 0L) }
                 .toMap
 
-            Table.insertInto(
+            Table.insertInto(NonEmptyVector.of(
                     Table.code --> code,
                     Table.displayName --> name,
-                    Table.tagStats --> tagStats
-                )
+                    Table.tagStats --> tagStats ))
                 .update
-                .withUniqueGeneratedKeys(Table.columnNames *)
+                .withUniqueGeneratedKeys(Table.columnNames*)
         }
 
-        def updateStat(code: String, stat: Stat, newVal: CourseStat, now: Instant): ConnectionIO[Boolean] =
-            sql"${
-                Table.updateTable(
-                    Table.createdAt --> now,
-                    (Table.getStat(stat) ==> newVal).toVector *
-                )
-            } WHERE ${Table.code === code}"
-                .update
-                .run
-                .map(_ == 1)
-
-        private[repository] def addStatValue(code: String, stat: Stat, newVal: Int, now: Instant): ConnectionIO[Float] =
+        def updateStats(code: String, stats: Map[Stat, CourseStat]): ConnectionIO[Boolean] =
             for {
-                course <- OptionT(getByCode(code, forUpdate = true)).getOrRaise(EntityNotFoundException(s"No course with code [$code]"))
-                statDef = course.getStat(stat)
-                newCount = statDef.count + 1
-                newSum = statDef.sum + newVal
-                newRate = newSum / newSum
-                newStat = CourseStat(
-                    rate = newRate,
-                    count = newCount,
-                    sum = newSum
-                )
-                ans <- updateStat(code, stat, newStat, now)
-                _ <- MonadThrow[ConnectionIO].raiseUnless(ans)(new AssertionError("No update after selecting entity. This should never happen!"))
-            } yield newRate
+                now <- F.realTimeInstant
+                sql =
+                    sql"${
+                        Table.updateTable(
+                            Table.updatedAt --> now,
+                            Table.stats --> stats
+                        )
+                    } WHERE ${Table.code === code}"
+                ans <- sql.update.run.map(_ == 1)
+            } yield ans
     }
 }

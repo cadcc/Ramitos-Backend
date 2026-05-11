@@ -16,7 +16,7 @@ trait ReviewRepository {
         accountId: Int,
         courseCode: String,
         comments: String,
-        stats: Map[Stat, Int],
+        stats: Map[Stat, Byte],
         tags: Vector[String],
     ): ConnectionIO[Review]
 }
@@ -43,7 +43,7 @@ object ReviewRepository {
             accountId: Int,
             courseCode: String,
             comments: String,
-            stats: Map[Stat, Int],
+            stats: Map[Stat, Byte],
             tags: Vector[String],
         ): ConnectionIO[Review] = {
             val upds: NonEmptyList[(Fragment, Fragment)] = NonEmptyList.of(

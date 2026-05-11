@@ -1,6 +1,7 @@
 package cl.cadcc.ramitos.model
 
 import cats.syntax.all.*
+import cats.Show
 import doobie.postgres.{Instances, PostgresJavaTimeMetaInstances, free, syntax}
 import doobie.postgres.circe.Instances.JsonbInstances
 import doobie.util.{Get, Put}
@@ -16,21 +17,36 @@ private[model] object implicits
     with syntax.ToPostgresExplainOps
     with PostgresJavaTimeMetaInstances
 {
-    given stringMapGet[A](using Decoder[A]): Get[Map[String, A]] = Get[Json].temap { json =>
+    import cl.cadcc.ramitos.model.Stat
+
+    given stringMapGet[A: Decoder]: Get[Map[String, A]] = Get[Json].temap { json =>
         for {
             obj <- json.asObject.toRight("Json object was expected to be an object.")
             ans <- obj.toList.traverse { (k, v) => v.as[A].bimap(err => err.show, (k, _)) }
         } yield ans.toMap
     }
 
-    given stringMapPut[A](using Encoder[A]): Put[Map[String, A]] = Put[Json].contramap(_.asJson)
+    given stringMapPut[A: Encoder]: Put[Map[String, A]] = Put[Json].contramap(_.asJson)
 
-    given vectorGet[A](using Decoder[A]): Get[Vector[A]] = Get[Json].temap { json =>
+    given vectorGet[A: Decoder]: Get[Vector[A]] = Get[Json].temap { json =>
         for {
             arr <- json.asArray.toRight("Json object was expected to be an array.")
             ans <- arr.traverse(_.as[A].leftMap(_.show))
         } yield ans
     }
 
-    given vectorPut[A](using Encoder[A]): Put[Vector[A]] = Put[Json].contramap(_.asJson)
+    given vectorPut[A: Encoder]: Put[Vector[A]] = Put[Json].contramap(_.asJson)
+
+    given statMapGet[A: {Decoder, Show}]: Get[Map[Stat, A]] = stringMapGet[A].temap { map =>
+        map.toList
+            .traverse { (k, v) =>
+                Stat.ofString(k)
+                    .toRight(s"Unknown stat key '$k'.")
+                    .map { newK => (newK, v) } }
+            .map(_.toMap)
+    }
+
+    given statMapPut[A](using Encoder[A]): Put[Map[Stat, A]] = stringMapPut[A].tcontramap { map =>
+        map.map { (k, v) => (k.s, v)}
+    }
 }

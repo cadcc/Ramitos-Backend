@@ -23,10 +23,11 @@ operation ListCourseReviews {
     limit: Long
 
     @httpQuery("after")
-    after: Long
+    after: Integer
   }
   output := {
     @httpPayload
+    @required
     content: AnonymousReviews
   }
 }
@@ -43,22 +44,11 @@ structure AnonymousReview {
   @length(min: 20, max: 1000)
   comment: String
 
-  dificultad: Float
-  docencia: Float
-  vibes: Float
-  carga: Float
-  relevancia: Float
+  @required
+  stats: ReviewStats
 
-
+  @required
+  tags: ReviewStats
 
   created_at: Timestamp
-}
-
-map AnonymousReviewTags {
-  key: String
-  value: ReviewTag
-}
-
-structure ReviewTag {
-  
 }

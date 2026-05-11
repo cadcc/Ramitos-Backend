@@ -52,15 +52,35 @@ structure Course {
   name: String
 
   @required
-  difficulty: Float
+  stats: CourseStats
 
   @required
-  load: Float
-
-  @required
-  utility: Float
-
-  @required
-  interest: Float
+  tag_stats: CourseTagStats
 }
 
+structure CourseStats {
+  @required
+  docencia: CourseStat
+
+  @required
+  vibes: CourseStat
+
+  @required
+  relevancia: CourseStat
+
+  @required
+  carga: CourseStat
+
+  @required
+  dificultad: CourseStat
+}
+
+structure CourseStat {
+  @required
+  value: Float
+}
+
+map CourseTagStats {
+  key: String
+  value: CourseStat
+}
