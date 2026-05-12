@@ -20,7 +20,7 @@ trait CourseRepository {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
     def list(limit: Long, from: Option[String]): Stream[ConnectionIO, Course]
     def create(code: String, name: String): ConnectionIO[Course]
-    def updateStats(code: String, stats: Map[Stat, CourseStat]): ConnectionIO[Boolean]
+    def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean]
 }
 
 object CourseRepository {
@@ -49,7 +49,7 @@ object CourseRepository {
                     case Some(value) => fr"WHERE ${Table.code < value}"
                     case None => fr"")
                 ++
-                fr"GROUP BY $Table.code LIMIT $limit"
+                fr"ORDER BY $Table.code LIMIT $limit"
             sql.query[Course].stream
 
         def create(code: String, name: String): ConnectionIO[Course] = {
@@ -66,14 +66,15 @@ object CourseRepository {
                 .withUniqueGeneratedKeys(Table.columnNames*)
         }
 
-        def updateStats(code: String, stats: Map[Stat, CourseStat]): ConnectionIO[Boolean] =
+        def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean] =
             for {
                 now <- F.realTimeInstant
                 sql =
                     sql"${
                         Table.updateTable(
                             Table.updatedAt --> now,
-                            Table.stats --> stats
+                            Table.stats --> stats,
+                            Table.tagStats --> tagStats,
                         )
                     } WHERE ${Table.code === code}"
                 ans <- sql.update.run.map(_ == 1)

@@ -1,14 +1,16 @@
 package cl.cadcc.ramitos.utils
 
-import cl.cadcc.ramitos.model.{AccountRole => ModelRole}
-import cl.cadcc.ramitos.schema.AccountRole
-import cats.syntax.all._
+import cl.cadcc.ramitos.model.AccountRole as ModelRole
+import cl.cadcc.ramitos.schema.{AccountRole, Ordering}
+import cats.syntax.all.*
 import cats.mtl.Ask
 import cats.MonadThrow
+
 import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
 import cats.MonadError
+import cl.cadcc.ramitos.repository.SqlOrder
 
 object extensions {
     extension[F[_], E] (local: Ask[F, Option[E]])
@@ -28,10 +30,17 @@ object extensions {
                 case Right(value) => value.pure
     
     extension (role: AccountRole)
-        def toModel() = this match {
+        def toModel = this match {
             case AccountRole.NONE  => ModelRole.NONE
             case AccountRole.STATS => ModelRole.STATS
             case AccountRole.MOD   => ModelRole.MOD
             case AccountRole.ADMIN => ModelRole.ADMIN
         }
+
+    extension (ordering: Ordering) {
+        def toModel = this match {
+            case Ordering.ASCENDING  => SqlOrder.ASCENDING
+            case Ordering.DESCENDING => SqlOrder.DESCENDING
+        }
+    }
 }

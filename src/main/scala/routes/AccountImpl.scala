@@ -29,7 +29,7 @@ class AccountImpl[F[_]](session: Ask[F, Session])(using crypto: Crypto)(using Mo
     def createAccount(username: String, password: String, role: SchemaRole, name: String): F[SAccount] =
         minPermission(AccountRole.ADMIN) *>
         (for {
-            acc <- AccountRepository.create(name, role.toModel())
+            acc <- AccountRepository.create(name, role.toModel)
             hash = crypto.hashPassword(password)
             pass <- PasswordRepository.create(username, hash, acc.id)
         } yield acc)

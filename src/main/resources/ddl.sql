@@ -35,7 +35,7 @@ CREATE TABLE reviews(
     id SERIAL PRIMARY KEY,
     account_id INTEGER REFERENCES accounts(id),
     course_code VARCHAR(20) NOT NULL REFERENCES courses(code),
-    comments TEXT NOT NULL,
+    comments TEXT,
     docencia SMALLINT,
     vibes SMALLINT,
     relevancia SMALLINT,
@@ -44,3 +44,5 @@ CREATE TABLE reviews(
     tags JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX unique_reviews_account_course ON reviews(account_id, course_code);

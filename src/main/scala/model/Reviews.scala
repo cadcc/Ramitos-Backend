@@ -11,7 +11,7 @@ case class Review(
     id: Int,
     accountId: Int,
     courseCode: String,
-    comments: String,
+    comments: Option[String],
     stats: Map[Stat, Option[Byte]],
     tags: Vector[String],
     createdAt: Instant
@@ -25,7 +25,7 @@ object Review {
         val id: Column[Int] = Column("id")
         val accountId: Column[Int] = Column("account_id")
         val courseCode: Column[String] = Column("course_code")
-        val comments: Column[String] = Column("comments")
+        val comments: Column[Option[String]] = Column("comments")
         val docencia: Column[Option[Byte]] = Column("docencia")
         val vibes: Column[Option[Byte]] = Column("vibes")
         val relevancia: Column[Option[Byte]] = Column("relevancia")
@@ -47,7 +47,7 @@ object Review {
             id: Int,
             accountId: Int,
             courseCode: String,
-            comments: String,
+            comments: Option[String],
             docencia: Option[Byte],
             vibes: Option[Byte],
             relevancia: Option[Byte],

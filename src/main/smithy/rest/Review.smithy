@@ -43,8 +43,11 @@ operation CreateReview {
 @readonly
 operation ListReviews {
     input := {
-        @httpQuery("courseId")
+        @httpQuery("course_id")
         courseId: String
+
+        @httpQuery("account_id")
+        accountId: Integer
 
         @httpQuery("limit")
         @range(min: 1, max: 50)
@@ -53,6 +56,10 @@ operation ListReviews {
 
         @httpQuery("after")
         after: Integer
+
+        @httpQuery("created_order")
+        @default("desc")
+        createdOrder: Ordering
     }
     output := {
         @httpPayload
@@ -89,19 +96,19 @@ structure Review {
 
 structure ReviewStats {
     @range(min: 1, max: 5)
-    docencia: Integer
+    docencia: Byte
 
     @range(min: 1, max: 5)
-    vibes: Integer
+    vibes: Byte
 
     @range(min: 1, max: 5)
-    relevancia: Integer
+    relevancia: Byte
 
     @range(min: 1, max: 5)
-    carga: Integer
+    carga: Byte
 
     @range(min: 1, max: 5)
-    dificultad: Integer
+    dificultad: Byte
 }
 
 list ReviewTags {

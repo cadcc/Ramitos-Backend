@@ -18,3 +18,13 @@ structure NotFound {}
 @error("client")
 @httpError(403)
 structure InsufficientPermissions {}
+
+@error("client")
+@httpError(422)
+structure DuplicatedEntity {
+    @required
+    reason: String = "DuplicatedEntity"
+
+    @required
+    conflicting_fields: NonEmptyStringList
+}

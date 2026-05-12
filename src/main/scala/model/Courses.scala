@@ -43,7 +43,26 @@ case class Course(
     tagStats: Map[String, CourseStat],
     createdAt: Instant,
     updatedAt: Instant
-) derives Read, Write
+) derives Read, Write {
+    def mergeStats(stats: Map[Stat, Option[Byte]], tags: Set[String]): Course =
+        val newStats = this.stats.map { (k, v) =>
+            stats.get(k).flatten match
+                case Some(rating) =>
+                    val newSum = v.sum + rating
+                    val newCount = v.count + 1
+                    (k, CourseStat(newSum / newCount, newCount, newSum))
+                case None => (k, v)
+        }
+        val newTags = this.tagStats.map { (k, v) =>
+            val newCount = v.count + (if tags.isEmpty then 0 else 1)
+            if tags.contains(k) then
+                val newSum = v.sum + 1
+                (k, CourseStat(newSum / newCount, newCount, newSum))
+            else
+                (k, (CourseStat(v.sum / newCount, newCount, v.sum)))
+        }
+        this.copy(stats = newStats, tagStats = newTags)
+}
 
 object Course {
 
