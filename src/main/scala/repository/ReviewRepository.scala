@@ -34,6 +34,10 @@ trait ReviewRepository {
 
 object ReviewRepository {
 
+    def apply(using ev: ReviewRepository): ReviewRepository = ev
+
+    def ofCourseRepository(cr: CourseRepository) : ReviewRepository = ReviewRepositoryImpl(cr)
+
     private class ReviewRepositoryImpl(courseRepository: CourseRepository) extends ReviewRepository {
         private val Table = Review.Table
 
