@@ -29,8 +29,10 @@ def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
         acc  <- makeRoutes(AccountImpl[IO](ctx.auth.askSession))
         cour <- makeRoutes(CourseImpl[IO])
         rew  <- makeRoutes(ReviewImpl[IO])
+        arew <- makeRoutes(AnonymousReviewImpl[IO])
     } yield woof
         <+> auth
         <+> acc
         <+> cour
         <+> rew
+        <+> arew

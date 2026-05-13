@@ -5,21 +5,22 @@ namespace cl.cadcc.ramitos.schema
 use alloy#simpleRestJson
 
 @simpleRestJson
-@httpBearerAuth
 service AnonymousReviewService {
   version: "1.0.0"
   operations: [ListCourseReviews]
 }
 
-@http(method: "GET", uri: "/api/courses/{courseId}/reviews")
+@http(method: "GET", uri: "/api/courses/{courseCode}/reviews")
 @readonly
 operation ListCourseReviews {
   input := {
     @required
     @httpLabel
-    courseId: String
+    courseCode: String
 
     @httpQuery("limit")
+    @range(min: 1, max: 50)
+    @default(50)
     limit: Long
 
     @httpQuery("after")
@@ -41,14 +42,14 @@ structure AnonymousReview {
   id: Long
 
   @required
-  @length(min: 20, max: 1000)
-  comment: String
+  comments: String
 
   @required
   stats: ReviewStats
 
   @required
-  tags: ReviewStats
+  tags: ReviewTags
 
+  @required
   created_at: Timestamp
 }

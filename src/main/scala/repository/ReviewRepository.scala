@@ -2,7 +2,7 @@ package cl.cadcc.ramitos.repository
 
 import cats.syntax.all.*
 import cats.data.{NonEmptyList, OptionT}
-import cl.cadcc.ramitos.model.{Review, Stat}
+import cl.cadcc.ramitos.model.{Course, Review, Stat}
 import doobie.syntax.all.*
 import doobie.{ConnectionIO, Fragment}
 import fs2.Stream
@@ -11,7 +11,7 @@ import scala.language.implicitConversions
 
 trait ReviewRepository {
     def getById(id: Int): ConnectionIO[Option[Review]]
-    def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
+    def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, withComments: Option[Boolean] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
 
     /**
      * This method locks on the course row.
@@ -40,6 +40,7 @@ object ReviewRepository {
 
     private class ReviewRepositoryImpl(courseRepository: CourseRepository) extends ReviewRepository {
         private val Table = Review.Table
+        private val CourseTable = Course.Table
 
         def getById(id: Int): ConnectionIO[Option[Review]] =
             sql"SELECT * FROM $Table WHERE ${Table.id === id}".query[Review].option
@@ -48,6 +49,7 @@ object ReviewRepository {
             limit: Long,
             courseCode: Option[String] = None,
             accountId: Option[Int] = None,
+            withComments: Option[Boolean] = None,
             after: Option[Int] = None,
             order: SqlOrder = SqlOrder.DESCENDING
         ): Stream[ConnectionIO, Review] = {
@@ -55,6 +57,10 @@ object ReviewRepository {
                 courseCode.map(Table.courseCode === _),
                 accountId.map(Table.accountId === _),
                 after.map(Table.id > _),
+                withComments.map {
+                    case true => Table.comments.isNotNull
+                    case false => Table.comments.isNull
+                },
             )
             val sql =
                 fr"SELECT * FROM $Table " ++ where ++

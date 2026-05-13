@@ -10,7 +10,7 @@ import cl.cadcc.ramitos.utils.extensions.*
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.model.{AccountRole, Stat, Review as ModelReview}
 import cl.cadcc.ramitos.repository.ReviewRepository
-import cl.cadcc.ramitos.routes.utils.minPermission
+import cl.cadcc.ramitos.routes.utils.*
 import cl.cadcc.ramitos.schema
 import cl.cadcc.ramitos.schema.{DuplicatedEntity, InsufficientPermissions, ListReviewsOutput, NotFound, Review, ReviewService, ReviewStats}
 import cl.cadcc.ramitos.utils.Shapeless.schemaConvert
@@ -28,15 +28,6 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using session:
             stats = statsToSchema(m.stats),
             tags = m.tags.toList,
             created_at = Timestamp.fromInstant(m.createdAt)
-        )
-
-    private def statsToSchema(m: Map[Stat, Option[Byte]]): ReviewStats =
-        ReviewStats(
-            docencia = m(Stat.DOCENCIA),
-            vibes = m(Stat.VIBES),
-            relevancia = m(Stat.RELEVANCIA),
-            carga = m(Stat.CARGA),
-            dificultad = m(Stat.DIFICULTAD),
         )
 
     private def schemaToStats(s: ReviewStats): Map[Stat, Option[Byte]] =
