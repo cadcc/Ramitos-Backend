@@ -13,7 +13,7 @@ object Loc {
         if sym.isClassDef || sym.isDefDef || sym.isPackageDef then sym
         else getClassOrMethodOwner(sym.owner)
 
-    def origin(using quotes: Quotes): Expr[Loc] =
+    private def origin(using quotes: Quotes): Expr[Loc] =
         val owner = getClassOrMethodOwner(quotes.reflect.Symbol.spliceOwner)
         val pos = quotes.reflect.Position.ofMacroExpansion
 

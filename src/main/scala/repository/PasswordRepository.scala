@@ -12,12 +12,12 @@ object PasswordRepository {
     val Table = Password.Table
 
     def getByUsername(username: String): ConnectionIO[Option[Password]] =
-        sql"SELECT ${Table.columns} FROM $Table WHERE ${Table.username === username}"
+        sql"SELECT ${Table.all} FROM $Table WHERE ${Table.username === username}"
             .query[Password]
             .option
     
     def getByAccountId(accountId: Int): ConnectionIO[Option[Password]] =
-        sql"SELECT ${Table.columns} FROM $Table WHERE ${Table.accountId === accountId}"
+        sql"SELECT ${Table.all} FROM $Table WHERE ${Table.accountId === accountId}"
             .query[Password]
             .option
 

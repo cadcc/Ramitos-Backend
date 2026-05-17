@@ -51,5 +51,6 @@ structure AnonymousReview {
   tags: ReviewTags
 
   @required
+  @timestampFormat("date-time")
   created_at: Timestamp
 }

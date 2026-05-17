@@ -15,7 +15,7 @@ service CourseService {
 operation ListCourses {
   input := {
     @httpQuery("limit")
-    @range(min: 1, max: 50)
+    @range(min: 1) // removed max. May be dangerous! discuss consequences later.
     @default(50)
     limit: Long
 
@@ -59,19 +59,10 @@ structure Course {
 }
 
 structure CourseStats {
-  @required
   docencia: CourseStat
-
-  @required
   vibes: CourseStat
-
-  @required
   relevancia: CourseStat
-
-  @required
   carga: CourseStat
-
-  @required
   dificultad: CourseStat
 }
 

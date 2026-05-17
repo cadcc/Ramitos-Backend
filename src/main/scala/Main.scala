@@ -5,15 +5,16 @@ import cats.data.NonEmptyList
 import cats.effect.*
 import cats.effect.std.SystemProperties
 import cats.syntax.all.*
+import cl.cadcc.ramitos.config.{DbConfig, DccLogin, TagSettings}
 import cl.cadcc.ramitos.middleware.AuthMiddleware
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.repository.{CourseRepository, ReviewRepository}
 import cl.cadcc.ramitos.routes.restRoutes
 import cl.cadcc.ramitos.schema.NotAuthenticated
-import cl.cadcc.ramitos.utils.Crypto
-import cl.cadcc.ramitos.utils.DccPortal
+import cl.cadcc.ramitos.utils.{Crypto, DccPortal}
 import com.zaxxer.hikari.HikariConfig as HikariConfiguration
 import doobie.hikari.HikariTransactor
+import doobie.util.log.LogHandler
 import doobie.util.transactor.Transactor
 import io.circe.generic.auto.*
 import io.circe.syntax.*
@@ -27,7 +28,6 @@ import org.http4s.implicits.*
 import org.postgresql.ds.PGSimpleDataSource
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
-import doobie.util.log.LogHandler
 
 object Main extends IOApp {
     given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
@@ -48,8 +48,8 @@ object Main extends IOApp {
         config.hikari.maxLifetimeMillis.foreach( hikari.setMaxLifetime )
         config.hikari.maximumPoolSize  .foreach( hikari.setMaximumPoolSize )
         config.hikari.minimumIdleMillis.foreach( hikari.setMinimumIdle )
-        
-        HikariTransactor.fromHikariConfig(hikari)
+
+        HikariTransactor.fromHikariConfig(hikari, logHandler = LogHandler.jdkLogHandler[IO].some)
     
     private val resources: Resource[IO, RamitosContext[IO]] =
         for {
@@ -63,6 +63,7 @@ object Main extends IOApp {
             courseRepository = CourseRepository.ofConf(conf.app.tags)
             reviewRepository = ReviewRepository.ofCourseRepository(courseRepository)
             dccPortal = DccPortal.ofConcurrent(client, conf.auth.dccLogin)
+//            _ = crypto.hashPassword("mish123")
         } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, dccPortal)
 
     override def run(args: List[String]): IO[ExitCode] =

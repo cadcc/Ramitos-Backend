@@ -20,18 +20,18 @@ object JavaTime {
 
     def apply[F[_]](using ev: JavaTime[F]): JavaTime[F] = ev
 
-    given fromClock[F[_]](using clock: Clock[F]): JavaTime[F] =
-        TimeImpl[F](using clock)
+    given fromClock[F[_]](using Clock[F]): JavaTime[F] =
+        TimeImpl[F]
 
-    private class TimeImpl[F[_]](using clock: Clock[F]) extends JavaTime[F] {
-        given Applicative[F] = clock.applicative
+    private class TimeImpl[F[_]: Clock as F] extends JavaTime[F] {
+        given Applicative[F] = F.applicative
 
-        val getInstant: F[Instant] = clock.realTimeInstant
+        val getInstant: F[Instant] = F.realTimeInstant
 
         val getLocalDateTimeUtc: F[LocalDateTime] =
-            clock.realTimeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDateTime())
+            F.realTimeInstant.map(_.atZone(ZoneOffset.UTC).toLocalDateTime())
 
         val getEpochSeconds: F[Long] =
-            clock.realTime.map(_.toSeconds)
+            getInstant.map(_.getEpochSecond)
     }
 }

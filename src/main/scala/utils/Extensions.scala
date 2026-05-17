@@ -15,7 +15,7 @@ import cl.cadcc.ramitos.repository.SqlOrder
 object extensions {
     extension[F[_], E] (local: Ask[F, Option[E]])
         def toGetSome(errorMessage: String)(using MonadThrow[F]) =
-            AskWithUnderlingOption(errorMessage, local)
+            AskOptionGet(errorMessage, local)
 
     extension[T] (tried: Try[T])
         def getM[F[_]](using MonadThrow[F]): F[T] =
@@ -24,13 +24,13 @@ object extensions {
                 case Success(value) => value.pure
 
     extension[Throw <: Throwable, T] (either: Either[Throw, T])
-        def getM[F[_]](using MonadError[F, Throw]): F[T] =
+        def getM[F[_]](using F: MonadError[F, Throw]): F[T] =
             either match
-                case Left(value) => MonadError[F, Throw].raiseError(value)
+                case Left(value) => F.raiseError(value)
                 case Right(value) => value.pure
     
     extension (role: AccountRole)
-        def toModel = this match {
+        def toModel: ModelRole = role match {
             case AccountRole.NONE  => ModelRole.NONE
             case AccountRole.STATS => ModelRole.STATS
             case AccountRole.MOD   => ModelRole.MOD
@@ -38,7 +38,7 @@ object extensions {
         }
 
     extension (ordering: Ordering) {
-        def toModel = this match {
+        def toModel: SqlOrder = ordering match {
             case Ordering.ASCENDING  => SqlOrder.ASCENDING
             case Ordering.DESCENDING => SqlOrder.DESCENDING
         }

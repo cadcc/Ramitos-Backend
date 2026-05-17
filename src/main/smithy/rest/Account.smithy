@@ -60,9 +60,11 @@ structure Account {
   role: AccountRole
 
   @required
+  @timestampFormat("date-time")
   created_at: Timestamp
 
   @required
+  @timestampFormat("date-time")
   updated_at: Timestamp
 }
 

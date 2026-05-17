@@ -20,11 +20,9 @@ import cl.cadcc.ramitos.model.AccountRole
 import cl.cadcc.ramitos.repository.PasswordRepository
 
 
-class AccountImpl[F[_]](session: Ask[F, Session])(using crypto: Crypto)(using MonadCancelThrow[F], Clock[F], Transactor[F]) extends AccountService[F] {
-    private given Ask[F, Session] = session
-
+class AccountImpl[F[_]: {MonadCancelThrow as F, Clock, Transactor}](using askSession: Ask[F, Session], crypto: Crypto) extends AccountService[F] {
     def getSelf(): F[SAccount] =
-        session.ask.map(s => schemaConvert[Account, SAccount](s.account))
+        askSession.ask.map(s => schemaConvert[Account, SAccount](s.account))
 
     def createAccount(username: String, password: String, role: SchemaRole, name: String): F[SAccount] =
         minPermission(AccountRole.ADMIN) *>

@@ -47,7 +47,7 @@ object AccountRepository {
             }
 
     def getById(id: Int): ConnectionIO[Option[Account]] =
-        sql"SELECT ${Table.columns} FROM $Table WHERE ${Table.id === id}"
+        sql"SELECT ${Table.all} FROM $Table WHERE ${Table.id === id}"
             .query[Account]
             .option
 }

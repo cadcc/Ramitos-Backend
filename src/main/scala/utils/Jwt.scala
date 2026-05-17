@@ -1,5 +1,6 @@
 package cl.cadcc.ramitos
 
+import cl.cadcc.ramitos.config.JwtConfig
 import cl.cadcc.ramitos.model.Account
 import cl.cadcc.ramitos.utils.JavaTime
 import cats._
@@ -30,8 +31,8 @@ trait JwtTokens[F[_], Payload] {
 }
 
 sealed trait JwtException(reason: String, cause: Option[Throwable]) extends Exception
-case class JwtJsonException(val reason: String, val cause: Throwable) extends JwtException(reason, cause.some)
-case class JwtValidationException(val reason: String) extends JwtException(reason, None)
+case class JwtJsonException(reason: String, cause: Throwable) extends JwtException(reason, cause.some)
+case class JwtValidationException(reason: String) extends JwtException(reason, None)
 
 object JwtTokens {
 
@@ -82,11 +83,11 @@ object JwtTokens {
         private def verifyTokenTime(claims: JwtClaim, epochSeconds: Long): Try[Unit] =
             for {
                 _ <- claims.expiration match
-                        case Some(value) if value <= epochSeconds + leeway.toSeconds => Success(())
+                        case Some(value) if epochSeconds <= value + leeway.toSeconds => Success(())
                         case None => Success(())
                         case _ => Failure(JwtValidationException("The token has expired."))
                 _ <- claims.notBefore match
-                        case Some(value) if value <= epochSeconds - leeway.toSeconds => Success(())
+                        case Some(value) if value <= epochSeconds + leeway.toSeconds => Success(())
                         case None => Success(())
                         case _ => Failure(JwtValidationException("The token was provided before is valid."))
             } yield ()

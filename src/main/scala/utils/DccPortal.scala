@@ -1,31 +1,14 @@
 package cl.cadcc.ramitos.utils
 
-import cats._, cats.syntax.all._
-import cats.effect.syntax.all._
-
-import cl.cadcc.ramitos.DccLogin
-import cats.MonadThrow
-import org.http4s.client.Client
-import cats.Monad
+import cats.*
 import cats.effect.Concurrent
-import org.typelevel.log4cats.{Logger, LoggerFactory}
-import org.http4s.Method
-import org.http4s.Request
-import org.http4s.syntax.all.uri
-import org.http4s.circe._
-import org.http4s.UrlForm
-import cats.effect.IO
-import io.circe.generic.auto._
-import org.http4s.EntityDecoder
-import io.circe.Codec
-import io.circe.Json
-import io.circe.KeyDecoder.decodeKeyString
-import org.http4s.circe.CirceEntityEncoder.circeEntityEncoder
-import org.http4s.circe.CirceEntityDecoder.circeEntityDecoder
+import cats.syntax.all.*
+import cl.cadcc.ramitos.config.DccLogin
+import io.circe.{Codec, Decoder}
 import org.http4s.Uri
-import org.http4s.Query
-import io.circe.Decoder
-import io.circe.DecodingFailure
+import org.http4s.circe.*
+import org.http4s.client.Client
+import org.typelevel.log4cats.{Logger, LoggerFactory}
 
 trait DccPortal[F[_]] {
     def getUser(username: String, secret: String): F[Option[DccPortal.PortalUser]]

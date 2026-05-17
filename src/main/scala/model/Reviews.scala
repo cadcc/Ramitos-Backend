@@ -2,6 +2,7 @@ package cl.cadcc.ramitos.model
 
 import cl.cadcc.ramitos.model.Stat
 import doobie.*
+import doobie.implicits.*
 import doobie.postgres.implicits.*
 
 import java.time.Instant
@@ -15,9 +16,50 @@ case class Review(
     stats: Map[Stat, Option[Byte]],
     tags: Vector[String],
     createdAt: Instant
-) derives Read, Write
+)
 
 object Review {
+    private type Tup = (Int, Int, String, Option[String], Option[Byte], Option[Byte], Option[Byte], Option[Byte], Option[Byte], Vector[String], Instant)
+
+    given Read[Review] = Read[Tup].map(toModel.tupled)
+    given Write[Review] = Write[Tup].contramap(ofModel)
+
+    private def toModel(
+        id: Int,
+        accountId: Int,
+        courseCode: String,
+        comments: Option[String],
+        docencia: Option[Byte],
+        vibes: Option[Byte],
+        relevancia: Option[Byte],
+        carga: Option[Byte],
+        dificultad: Option[Byte],
+        tags: Vector[String],
+        createdAt: Instant) =
+        Review(
+            id,
+            accountId,
+            courseCode,
+            comments,
+            Map(
+                Stat.DOCENCIA -> docencia,
+                Stat.VIBES -> vibes,
+                Stat.RELEVANCIA -> relevancia,
+                Stat.CARGA -> carga,
+                Stat.DIFICULTAD -> dificultad,
+            ),
+            tags,
+            createdAt
+        )
+
+    private def ofModel(m: Review) =
+        (
+            m.id, m.accountId, m.courseCode, m.comments,
+            m.stats(Stat.DOCENCIA), m.stats(Stat.VIBES),
+            m.stats(Stat.RELEVANCIA), m.stats(Stat.CARGA),
+            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt
+        )
+    
     object Table extends TableDefinition("reviews") {
         lazy val columns = Composite(all)
         lazy val columnNames = all.columns.map(_.rawName).toVector
@@ -42,42 +84,6 @@ object Review {
                 case Stat.CARGA => carga
                 case Stat.DIFICULTAD => dificultad
             }
-            
-        private def toModel(
-            id: Int,
-            accountId: Int,
-            courseCode: String,
-            comments: Option[String],
-            docencia: Option[Byte],
-            vibes: Option[Byte],
-            relevancia: Option[Byte],
-            carga: Option[Byte],
-            dificultad: Option[Byte],
-            tags: Vector[String],
-            createdAt: Instant) =
-            Review(
-                id,
-                accountId,
-                courseCode,
-                comments,
-                Map(
-                    Stat.DOCENCIA -> docencia,
-                    Stat.VIBES -> vibes,
-                    Stat.RELEVANCIA -> relevancia,
-                    Stat.CARGA -> carga,
-                    Stat.DIFICULTAD -> dificultad,
-                ),
-                tags,
-                createdAt
-            )
-            
-        private def ofModel(m: Review) =
-            (
-                m.id, m.accountId, m.courseCode, m.comments,
-                m.stats(Stat.DOCENCIA), m.stats(Stat.VIBES),
-                m.stats(Stat.RELEVANCIA), m.stats(Stat.CARGA),
-                m.stats(Stat.DIFICULTAD), m.tags, m.createdAt
-            )
         
         object all extends WithSQLDefinition[Review](Composite((
             id.sqlDef,

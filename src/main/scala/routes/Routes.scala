@@ -19,20 +19,22 @@ private def makeRoutes[Alg[_[_,_,_,_,_]], F[_]](impl: FunctorAlgebra[Alg, F])(us
     SimpleRestJsonBuilder
         .routes(impl)
         .middleware(ctx.auth.middleware)
-        .onError(t => logger.error(t)("sadge"))
+//        .onError(t => logger.error(t)("sadge"))
         .resource
 
 def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
     for {
         woof <- makeRoutes(WoofImpl[IO])
         auth <- makeRoutes(AuthenticationImpl[IO])
-        acc  <- makeRoutes(AccountImpl[IO](ctx.auth.askSession))
+        acc  <- makeRoutes(AccountImpl[IO])
         cour <- makeRoutes(CourseImpl[IO])
         rew  <- makeRoutes(ReviewImpl[IO])
         arew <- makeRoutes(AnonymousReviewImpl[IO])
+        docs <- Resource.pure(Docs.docs[IO])
     } yield woof
         <+> auth
         <+> acc
         <+> cour
         <+> rew
         <+> arew
+        <+> docs

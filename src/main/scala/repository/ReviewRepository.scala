@@ -43,7 +43,7 @@ object ReviewRepository {
         private val CourseTable = Course.Table
 
         def getById(id: Int): ConnectionIO[Option[Review]] =
-            sql"SELECT * FROM $Table WHERE ${Table.id === id}".query[Review].option
+            sql"SELECT ${Table.all} FROM $Table WHERE ${Table.id === id}".query[Review].option
 
         def list(
             limit: Long,
@@ -63,7 +63,7 @@ object ReviewRepository {
                 },
             )
             val sql =
-                fr"SELECT * FROM $Table " ++ where ++
+                fr"SELECT ${Table.all} FROM $Table" ++ where ++
                 fr"ORDER BY ${Table.createdAt} ASC"
             sql.query[Review].stream
         }
@@ -97,7 +97,8 @@ object ReviewRepository {
             val upds: NonEmptyList[(Fragment, Fragment)] = NonEmptyList.of(
                 Table.accountId --> accountId,
                 Table.courseCode --> courseCode,
-                Table.comments --> comments
+                Table.comments --> comments,
+                Table.tags --> tags,
             )
 
             val statUpds: List[(Fragment, Fragment)] = stats.toList.map( (stat, value) => Table.stat(stat) --> value)

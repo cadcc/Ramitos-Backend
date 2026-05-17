@@ -5,7 +5,6 @@ import cats.syntax.all.*
 import cats.effect.{IO, Sync}
 import com.comcast.ip4s.{Host, Port}
 import org.http4s.Uri
-import org.typelevel.log4cats.LoggerFactory
 import pureconfig.*
 import pureconfig.error.{ConfigReaderFailures, ConvertFailure, UserValidationFailed}
 import pureconfig.generic.derivation.*
@@ -13,117 +12,119 @@ import pureconfig.module.catseffect.syntax.*
 import pureconfig.module.http4s.*
 import pureconfig.module.ip4s.*
 
-import java.util.Properties
+object config {
+    case class DbCredentials(
+        username: String,
+        password: String,
+        database: String
+    ) derives ConfigReader
 
-case class DbCredentials(
-    username: String,
-    password: String,
-    database: String
-) derives ConfigReader
+    case class HikariConfig(
+        maximumPoolSize: Option[Int],
+        minimumIdleMillis: Option[Int],
+        maxLifetimeMillis: Option[Long],
+        idleTimeoutMillis: Option[Long]
+    ) derives ConfigReader
 
-case class HikariConfig(
-    maximumPoolSize: Option[Int],
-    minimumIdleMillis: Option[Int],
-    maxLifetimeMillis: Option[Long],
-    idleTimeoutMillis: Option[Long]
-) derives ConfigReader
+    case class DbConfig(
+        host: Host,
+        port: Port,
+        credentials: DbCredentials,
+        hikari: HikariConfig
+    ) derives ConfigReader
 
-case class DbConfig(
-    host: Host,
-    port: Port,
-    credentials: DbCredentials,
-    hikari: HikariConfig
-) derives ConfigReader
+    case class BcryptConfig(
+        rounds: Int,
+        pepper: Option[String]
+    ) derives ConfigReader
 
-case class BcryptConfig(
-    rounds: Int,
-    pepper: Option[String]
-) derives ConfigReader
+    case class DccLogin(
+        baseUrl: Uri,
+        appName: String
+    ) derives ConfigReader
 
-case class DccLogin(
-    baseUrl: Uri,
-    appName: String
-) derives ConfigReader
+    case class JwtConfig(
+        secretKey: String,
+        accessTokenLifeSeconds: Long,
+        refreshTokenLifeSeconds: Long,
+        leewaySeconds: Long
+    ) derives ConfigReader
 
-case class JwtConfig(
-    secretKey: String,
-    accessTokenLifeSeconds: Long,
-    refreshTokenLifeSeconds: Long,
-    leewaySeconds: Long
-) derives ConfigReader
+    case class AuthConfig(
+        bcrypt: BcryptConfig,
+        dccLogin: DccLogin,
+        jwt: JwtConfig
+    ) derives ConfigReader
 
-case class AuthConfig(
-    bcrypt: BcryptConfig,
-    dccLogin: DccLogin,
-    jwt: JwtConfig
-) derives ConfigReader
+    case class HttpConfig(
+        host: Host,
+        port: Port
+    ) derives ConfigReader
 
-case class HttpConfig(
-    host: Host,
-    port: Port
-) derives ConfigReader
+    case class MufasaConfig(
+        baseUrl: Uri,
+        token: String
+    ) derives ConfigReader
 
-case class MufasaConfig(
-    baseUrl: Uri,
-    token: String
-) derives ConfigReader
+    sealed trait TagSetting
 
-sealed trait TagSetting
-case class SingleTag(id: String) extends TagSetting
-case class ExclusiveSet(ex: Set[String]) extends TagSetting derives ConfigReader
+    case class SingleTag(id: String) extends TagSetting
 
-given ConfigReader[TagSetting] = ConfigReader.fromCursor { cursor =>
-    val F = MonadError[ConfigReader.Result, ConfigReaderFailures]
-    val keys = Map(
-        "ex" -> ExclusiveSet.apply
-    )
-    val singleTag = cursor.asString.map(SingleTag.apply)
-    val set =
-        for {
-            obj <- cursor.asObjectCursor
-            _ <- F.raiseWhen(obj.keys.size != 1)(
-                ConfigReaderFailures(ConvertFailure(UserValidationFailed("A TagSetting must have at most 1 key, or be a String."), obj)))
-            key = obj.keys.last
-            app <- keys.get(key).toRight(
-                ConfigReaderFailures(ConvertFailure(UserValidationFailed(s"Unknown tag set, available tag sets are: $keys"), obj)))
-            keyCursor <- obj.atKey(key)
-            listCursor <- keyCursor.asList
-            list <- listCursor.traverse(_.asString)
-        } yield app(list.toSet)
-    singleTag orElse set
-}
+    case class ExclusiveSet(ex: Set[String]) extends TagSetting derives ConfigReader
 
-case class TagSettings(settings: Seq[TagSetting]) {
-    val allTags: Set[String] = settings.flatMap {
-        case SingleTag(id) => Seq(id)
-        case ExclusiveSet(ids) => ids
-    }.toSet
-
-    val definitions: Map[String, TagSetting] = settings.flatMap {
-        case setting @ SingleTag(id)     => Set(id -> setting)
-        case setting @ ExclusiveSet(set) => set.map(id => id -> setting)
-    }.toMap
-}
-
-given ConfigReader[TagSettings] = ConfigReader[List[TagSetting]].emap { settings =>
-    val allSet = settings.flatMap {
-        case SingleTag(id) => List(id)
-        case ExclusiveSet(ids) => ids.toList
+    given ConfigReader[TagSetting] = ConfigReader.fromCursor { cursor =>
+        val F = MonadError[ConfigReader.Result, ConfigReaderFailures]
+        val keys = Map(
+            "ex" -> ExclusiveSet.apply
+        )
+        val singleTag = cursor.asString.map(SingleTag.apply)
+        val set =
+            for {
+                obj <- cursor.asObjectCursor
+                _ <- F.raiseWhen(obj.keys.size != 1)(
+                    ConfigReaderFailures(ConvertFailure(UserValidationFailed("A TagSetting must have at most 1 key, or be a String."), obj)))
+                key = obj.keys.last
+                app <- keys.get(key).toRight(
+                    ConfigReaderFailures(ConvertFailure(UserValidationFailed(s"Unknown tag set, available tag sets are: $keys"), obj)))
+                keyCursor <- obj.atKey(key)
+                listCursor <- keyCursor.asList
+                list <- listCursor.traverse(_.asString)
+            } yield app(list.toSet)
+        singleTag orElse set
     }
-    if allSet.distinct.size == allSet.size then TagSettings(settings).asRight
-    else UserValidationFailed("All tags in the settings must be unique.").asLeft
-}
 
-case class AppConfig(
-    tags: TagSettings
-) derives ConfigReader
+    case class TagSettings(settings: Seq[TagSetting]) {
+        val allTags: Set[String] = settings.flatMap {
+            case SingleTag(id) => Seq(id)
+            case ExclusiveSet(ids) => ids
+        }.toSet
+
+        val definitions: Map[String, TagSetting] = settings.flatMap {
+            case setting@SingleTag(id) => Set(id -> setting)
+            case setting@ExclusiveSet(set) => set.map(id => id -> setting)
+        }.toMap
+    }
+
+    given ConfigReader[TagSettings] = ConfigReader[List[TagSetting]].emap { settings =>
+        val allSet = settings.flatMap {
+            case SingleTag(id) => List(id)
+            case ExclusiveSet(ids) => ids.toList
+        }
+        if allSet.distinct.size == allSet.size then TagSettings(settings).asRight
+        else UserValidationFailed("All tags in the settings must be unique.").asLeft
+    }
+
+    case class AppConfig(
+        tags: TagSettings
+    ) derives ConfigReader
+}
 
 case class RamitosConfig(
-    http: HttpConfig,
-    db: DbConfig,
-    auth: AuthConfig,
-    mufasa: MufasaConfig,
-    app: AppConfig
+    http: config.HttpConfig,
+    db: config.DbConfig,
+    auth: config.AuthConfig,
+    mufasa: config.MufasaConfig,
+    app: config.AppConfig,
 ) derives ConfigReader
 
 object RamitosConfig {

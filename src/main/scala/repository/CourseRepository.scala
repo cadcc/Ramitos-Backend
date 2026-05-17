@@ -1,17 +1,13 @@
 package cl.cadcc.ramitos.repository
 
 import cats.*
-import cats.syntax.all.*
+import cats.data.NonEmptyVector
+import cl.cadcc.ramitos.config.TagSettings
+import cl.cadcc.ramitos.model.{Course, CourseStat, Stat}
 import doobie.*
-import doobie.syntax.all.*
 import doobie.implicits.*
+import doobie.syntax.all.*
 import fs2.Stream
-import cl.cadcc.ramitos.model.Course
-import cl.cadcc.ramitos.model.Stat
-import cats.effect.{Clock, MonadCancel, Sync}
-import cats.data.{NonEmptyVector, OptionT}
-import cl.cadcc.ramitos.TagSettings
-import cl.cadcc.ramitos.model.CourseStat
 
 import java.time.Instant
 import scala.language.implicitConversions
@@ -36,7 +32,7 @@ object CourseRepository {
 
         def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]] =
             val sql =
-                fr"SELECT $Table.columns FROM $Table WHERE ${Table.code === code}"
+                fr"SELECT ${Table.all} FROM $Table WHERE ${Table.code === code}"
                     ++ (if forUpdate then fr"FOR UPDATE" else fr"")
 
             sql.query[Course]
@@ -44,12 +40,12 @@ object CourseRepository {
 
         def list(limit: Long, from: Option[String]): Stream[ConnectionIO, Course] =
             val sql =
-                fr"SELECT $Table.columns FROM $Table "
+                fr"SELECT ${Table.all} FROM $Table "
                     ++ (from match
-                    case Some(value) => fr"WHERE ${Table.code < value}"
+                    case Some(value) => fr"WHERE ${Table.code > value}"
                     case None => fr"")
                 ++
-                fr"ORDER BY $Table.code LIMIT $limit"
+                fr"ORDER BY ${Table.code} LIMIT $limit"
             sql.query[Course].stream
 
         def create(code: String, name: String): ConnectionIO[Course] = {

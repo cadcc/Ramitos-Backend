@@ -28,6 +28,9 @@ lazy val root = project
       // fs2
       "co.fs2" %% "fs2-io" % fs2Version,
 
+      // kittens
+      "org.typelevel" %% "kittens" % "3.5.0",
+
       // config
       "com.github.pureconfig" %% "pureconfig-core" % pureconfigVersion,
       "com.github.pureconfig" %% "pureconfig-ip4s" % pureconfigVersion,
@@ -77,4 +80,14 @@ lazy val root = project
 
     smithy4sAllowedNamespaces := List("cl.cadcc.ramitos.schema"),
     Compile / smithy4sInputDirs := List((ThisBuild / baseDirectory).value / "src" / "main" / "smithy"),
+
+
+    assembly / assemblyJarName := "ramitos.jar",
+    assembly / mainClass := Some("cl.cadcc.ramitos.Main"),
+    assembly / assemblyMergeStrategy := {
+      case s if s.endsWith("module-info.class") => MergeStrategy.discard
+      case s if s.endsWith("manifest") => MergeStrategy.first
+      case s if s.endsWith("smithy4s.tracking.smithy") => MergeStrategy.first
+      case x => MergeStrategy.defaultMergeStrategy(x)
+    },
   )

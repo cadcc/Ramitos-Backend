@@ -37,6 +37,7 @@ operation CreateReview {
         tags: ReviewTags
     }
     output : Review
+    errors: [DuplicatedEntity]
 }
 
 @http(method: "GET", uri: "/api/reviews")
@@ -91,6 +92,7 @@ structure Review {
     tags: ReviewTags
 
     @required
+    @timestampFormat("date-time")
     created_at: Timestamp
 }
 

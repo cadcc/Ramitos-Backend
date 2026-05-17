@@ -12,7 +12,7 @@ import doobie.util.{Get, Read, Write}
 
 import java.time.Instant
 import cl.cadcc.ramitos.model.implicits.given
-import io.circe.{Codec, Json}
+import io.circe.{Codec, Decoder, Encoder, Json}
 import io.circe.syntax.*
 
 
@@ -34,7 +34,32 @@ object Stat {
         case _ => None
 }
 
-case class CourseStat(rate: Float, count: Int, sum: Long) derives Codec, Show
+case class CourseStat(rate: Float, count: Int, sum: Long) derives Show
+
+object CourseStat {
+    given courseStatEncoder: Encoder[CourseStat] = Encoder.instance { cs =>
+        val rate: Option[Float] =
+            if cs.rate.isNaN then None
+            else cs.rate.some
+        Json.obj(
+            "rate" -> Json.fromFloatOrNull(rate),
+            "count" -> Json.fromInt(cs.count),
+            "sum" -> Json.fromLong(cs.sum),
+        )
+    }
+
+    given courseStatDecoder: Decoder[CourseStat] = Decoder.instance { cursor =>
+        for {
+            rateOpt <- cursor.get[Option[Float]]("rate")
+            rate = rateOpt match {
+                case None => Float.NaN
+                case Some(v) => v
+            }
+            count <- cursor.get[Int]("count")
+            sum <- cursor.get[Long]("sum")
+        } yield CourseStat(rate, count, sum)
+    }
+}
 
 case class Course(
     code: String,
@@ -77,7 +102,7 @@ object Course {
         
         val tagStats: Column[Map[String, CourseStat]] = Column("tag_stats")
 
-        val createdAt: Column[Instant] = Column("createdAt")
+        val createdAt: Column[Instant] = Column("created_at")
         val updatedAt: Column[Instant] = Column("updated_at")
 
         object all extends WithSQLDefinition[Course](Composite((

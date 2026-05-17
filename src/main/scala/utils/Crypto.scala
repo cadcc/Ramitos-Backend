@@ -1,10 +1,7 @@
 package cl.cadcc.ramitos.utils
 
-import com.password4j.Hash
-import com.password4j.Password
-import com.password4j.HashingFunction
-import com.password4j.BcryptFunction
-import cl.cadcc.ramitos.BcryptConfig
+import com.password4j.{BcryptFunction, Hash, HashBuilder, HashingFunction, Password}
+import cl.cadcc.ramitos.config.BcryptConfig
 
 
 trait Crypto {
@@ -23,7 +20,6 @@ object Crypto {
 
         def hashPassword(password: String): String =
             val hash: Hash = Password.hash(password)
-                .addRandomSalt(25)
                 .addPepper(pepper)
                 .`with`(hf)
             
