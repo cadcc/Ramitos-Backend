@@ -79,6 +79,7 @@ lazy val root = project
     scalacOptions ++= Seq("-Wvalue-discard", "-Wnonunit-statement", "-feature"),
 
     smithy4sAllowedNamespaces := List("cl.cadcc.ramitos.schema"),
+//    Compile / smithy4sSmithyBuildConfigs := Seq((ThisBuild / baseDirectory).value / "smithy-build.json"),
     Compile / smithy4sInputDirs := List((ThisBuild / baseDirectory).value / "src" / "main" / "smithy"),
 
 

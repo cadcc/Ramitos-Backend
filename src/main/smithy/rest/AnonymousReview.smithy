@@ -31,6 +31,7 @@ operation ListCourseReviews {
     @required
     content: AnonymousReviews
   }
+  errors: [NotFound]
 }
 
 list AnonymousReviews {

@@ -5,6 +5,12 @@ namespace cl.cadcc.ramitos.schema
 use alloy#simpleRestJson
 
 @error("client")
+@httpError(400)
+structure InvalidCredentials {
+
+}
+
+@error("client")
 @httpError(401)
 structure NotAuthenticated {
     reason: String

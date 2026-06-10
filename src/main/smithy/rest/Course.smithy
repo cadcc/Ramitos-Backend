@@ -3,11 +3,12 @@ $version: "2.0"
 namespace cl.cadcc.ramitos.schema
 
 use alloy#simpleRestJson
+use smithy.api#NonEmptyStringList
 
 @simpleRestJson
 service CourseService {
-  version: "1.0.0"
-  operations: [ListCourses, GetCourse]
+  version: "1.1.0"
+  operations: [ListCourses, GetCoursesStaticData, GetCourse]
 }
 
 @http(method: "GET", uri: "/api/courses")
@@ -15,9 +16,13 @@ service CourseService {
 operation ListCourses {
   input := {
     @httpQuery("limit")
-    @range(min: 1) // removed max. May be dangerous! discuss consequences later.
+    @range(min: 1, max: 50) // removed max. May be dangerous! discuss consequences later.
     @default(50)
     limit: Long
+
+    @httpQuery("codes")
+    @length(min: 1, max: 50)
+    codes: CourseListCodes
 
     @httpQuery("after")
     after: String
@@ -38,6 +43,32 @@ operation GetCourse {
     courseId: String
   }
   output: Course
+}
+
+@http(method: "GET", uri: "/api/courses.json")
+@readonly
+operation GetCoursesStaticData {
+  input := {
+//    @httpHeader("If-Modified-Since")
+//    @timestampFormat("http-date")
+//    notModifiedSince: Timestamp
+  }
+
+  output := {
+//    @httpHeader("Date")
+//    @required
+//    @timestampFormat("http-date")
+//    now: Timestamp
+//
+//    @httpHeader("Expires")
+//    @required
+//    @timestampFormat("http-date")
+//    expiresAt: Timestamp
+
+    @httpPayload
+    @required
+    content: CoursesStaticDataContainer
+  }
 }
 
 list Courses {
@@ -74,4 +105,38 @@ structure CourseStat {
 map CourseTagStats {
   key: String
   value: CourseStat
+}
+
+list CourseListCodes {
+  member: String
+}
+
+structure CoursesStaticDataContainer {
+  @required
+  count: Integer
+
+  @required
+  courses: CoursesStaticData
+
+  @required
+  categories: CategoryMap
+}
+
+list CoursesStaticData {
+  member: CourseStaticData
+}
+
+list CategoryMap {
+  member: String
+}
+
+structure CourseStaticData {
+  @required
+  code: String
+
+  @required
+  name: String
+
+  categories: IntegerList
+  mallas: IntegerList
 }

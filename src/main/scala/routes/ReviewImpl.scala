@@ -72,7 +72,7 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using session:
                     .transact(xa)
                     .exceptSomeSqlState {
                         case doobie.postgres.sqlstate.class23.UNIQUE_VIOLATION =>
-                            F.raiseError(DuplicatedEntity(List("course_code")))
+                            F.raiseError(DuplicatedEntity(Vector("course_code")))
                     }
         } yield modelToSchema(review)
 

@@ -9,6 +9,7 @@ use alloy#simpleRestJson
 service AccountService {
   version: "1.0.0"
   operations: [GetSelf, CreateAccount, UpdateAccount]
+  errors: [NotAuthenticated]
 }
 
 @http(method: "GET", uri: "/api/accounts/@me")
@@ -47,6 +48,8 @@ operation UpdateAccount {
     name: String
   }
   output: Account
+
+  errors: [NotFound]
 }
 
 structure Account {
