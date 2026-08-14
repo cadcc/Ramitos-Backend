@@ -43,7 +43,7 @@ def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
         arew <- makeRoutes(AnonymousReviewImpl[IO])
         docs <- Resource.pure(Docs.docs[IO])
     } yield woof
-        // <+> auth
+        <+> auth
         <+> acc
         <+> cour
         <+> rew
