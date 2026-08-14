@@ -158,7 +158,7 @@ object Authentication {
                 }.flatten
                 portalUri <- portal.authUri
                 maxAge = dccLoginConfig.loginTimeLimitSeconds * 3
-                cookie = s"WorkflowDccLogin=\"${uuid}\"; Path=/api/workflow/api/dcc; HttpOnly; Max-Age=${maxAge}"
+                cookie = s"WorkflowDccLogin=\"${uuid}\"; Path=/api/workflow/login/dcc; HttpOnly; Max-Age=${maxAge}"
             } yield DccLoginStartOutput(portalUri.toString, cookie)
 
         private val encoder = Base64.getEncoder
