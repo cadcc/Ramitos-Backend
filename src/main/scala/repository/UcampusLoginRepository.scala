@@ -26,7 +26,7 @@ object UcampusLoginRepository {
         )).update
             .withUniqueGeneratedKeys("ucampus_id", "account_id", "created_at")
 
-    def getOrCreateAccount(ucampusUsername: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
+    def getOrCreateAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
         for {
             ucampusLogin <- getUcampusLogin(ucampusUsername)
             accLogin <- ucampusLogin match {
@@ -34,13 +34,13 @@ object UcampusLoginRepository {
                     OptionT(AccountRepository.getById(login.accountId))
                         .map { acc => (acc, login) }
                         .getOrRaise( new Exception("not found") )
-                case None => createWithAccount(ucampusUsername, name)
+                case None => createWithAccount(ucampusUsername, mufasaId, name)
             }
         } yield accLogin
 
-    private def createWithAccount(ucampusUsername: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
+    private def createWithAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
         for {
-            acc <- AccountRepository.create(name, AccountRole.NONE)
+            acc <- AccountRepository.create(name, mufasaId.some, AccountRole.NONE)
             login <- create(ucampusUsername, acc.id)
         } yield (acc, login)
 }

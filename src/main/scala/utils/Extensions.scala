@@ -11,6 +11,7 @@ import scala.util.Failure
 import scala.util.Success
 import cats.MonadError
 import cl.cadcc.ramitos.repository.SqlOrder
+import cl.cadcc.ramitos.utils.Shapeless.SchemaModelConvert
 
 object extensions {
     extension[F[_], E] (local: Ask[F, Option[E]])
@@ -28,6 +29,11 @@ object extensions {
             either match
                 case Left(value) => F.raiseError(value)
                 case Right(value) => value.pure
+
+    extension[Model] (model: Model) {
+        def toSchema[Schema](using conv: SchemaModelConvert[Model, Schema]): Schema =
+            conv.convert(model)
+    }
     
     extension (role: AccountRole)
         def toModel: ModelRole = role match {

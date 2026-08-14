@@ -9,7 +9,7 @@ use alloy#simpleRestJson
 service AccountService {
   version: "1.0.0"
   operations: [GetSelf, CreateAccount, UpdateAccount]
-  errors: [NotAuthenticated]
+  errors: [NotAuthenticated, InsufficientPermissions]
 }
 
 @http(method: "GET", uri: "/api/accounts/@me")
@@ -19,6 +19,7 @@ operation GetSelf {
 }
 
 @http(method: "POST", uri: "/api/accounts")
+@reqRole(role: "admin")
 operation CreateAccount {
   input := {
     @required
@@ -26,6 +27,9 @@ operation CreateAccount {
 
     @required
     password: String
+
+    /// Must be a MUFASA compatible identifier. If missing, this user skips MUFASA checks
+    mufasaId: String
 
     @required
     role: AccountRole
@@ -59,6 +63,9 @@ structure Account {
   @required
   name: String
 
+  /// Usually it's a RUT.
+  mufasaId: String
+
   @required
   role: AccountRole
 
@@ -69,11 +76,4 @@ structure Account {
   @required
   @timestampFormat("date-time")
   updated_at: Timestamp
-}
-
-enum AccountRole {
-  NONE = "none",
-  STATS = "stats",
-  MOD = "mod",
-  ADMIN = "admin"
 }

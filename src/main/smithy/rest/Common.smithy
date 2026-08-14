@@ -20,6 +20,11 @@ list StringList {
     member: String
 }
 
+map StringMap {
+    key: String
+    value: String
+}
+
 enum Ordering {
     ASCENDING = "asc"
     DESCENDING = "desc"
@@ -33,3 +38,30 @@ structure preferGzip {}
 
 @trait(selector: ":is(service, operation)")
 structure conditionalByDate {}
+
+@trait(
+    selector: """
+        operation:test(
+            operation
+            -[output]-> structure
+            > member[id|member = 'location'][trait|smithy.api#httpHeader = 'Location']
+            > string
+        )
+        """
+)
+@range(min: 300, max: 399)
+integer redirect
+
+
+enum AccountRole {
+  NONE = "none",
+  STATS = "stats",
+  MOD = "mod",
+  ADMIN = "admin"
+}
+
+@trait(selector: ":is(service, operation)")
+structure reqRole {
+    @required
+    role: AccountRole
+}

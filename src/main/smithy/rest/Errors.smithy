@@ -34,3 +34,35 @@ structure DuplicatedEntity {
     @required
     conflicting_fields: NonEmptyStringList
 }
+
+@error("client")
+@httpError(400)
+structure StatisticallyImpossible {
+    @required
+    reason: String
+}
+
+@error("client")
+@httpError(400)
+structure WorkflowTrackerCookieMissing {
+    @required
+    cookieName: String
+}
+
+@error("client")
+@httpError(400)
+structure RequestReplayed {
+    @required
+    reason: String = "The server refuses to answer because the request was replayed."
+}
+
+@error("client")
+@httpError(400)
+structure WorkflowTimeout {
+    @required
+    reason: String = "The client took too long to finish the workflow. May retry from the start."
+
+    /// use this Uri to start the workflow again
+    @required
+    retry: String
+}

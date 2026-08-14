@@ -11,10 +11,11 @@ import scala.language.implicitConversions
 object AccountRepository {
     val Table = Account.Table
 
-    def create(displayName: String, role: AccountRole): ConnectionIO[Account] =
+    def create(displayName: String, mufasaId: Option[String], role: AccountRole): ConnectionIO[Account] =
         Table.insertInto(
             NonEmptySeq.of(
                 Table.displayName --> displayName,
+                Table.mufasaId --> mufasaId,
                 Table.role --> role
             )
         )

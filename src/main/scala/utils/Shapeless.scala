@@ -13,8 +13,8 @@ object Shapeless {
         def convert(s: Src): Dst
     }
 
-    def schemaConvert[Src <: Product, Dst](x: Src)(using m1: Mirror.ProductOf[Src], m2: Mirror.ProductOf[Dst])(using conv: SchemaModelConvert[m1.MirroredElemTypes, m2.MirroredElemTypes]) =
-        m2.fromTuple(conv.convert(Tuple.fromProductTyped(x)))
+    def toSchema[Src, Dst](x: Src)(using conv: SchemaModelConvert[Src, Dst]): Dst =
+        conv.convert(x)
 
     given idConv[T1 <: T2, T2]: SchemaModelConvert[T1, T2] = SchemaModelConvert.instance(identity)
 

@@ -3,6 +3,7 @@ CREATE TYPE account_role as ENUM ('none', 'stats', 'mod', 'admin');
 CREATE TABLE accounts(
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    mufasa_id VARCHAR(10),
     role account_role,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
