@@ -11,28 +11,39 @@ import cl.cadcc.ramitos.RamitosContext
 import cl.cadcc.ramitos.RamitosContext.given
 import smithy4s.Service
 import cats.effect.Concurrent
-import cl.cadcc.ramitos.routes.Authentication.AuthenticationImpl
+import cl.cadcc.ramitos.routes.Authentication
 import org.typelevel.log4cats.LoggerFactory
+import cl.cadcc.ramitos.middleware.RedirectMiddleware
+import cl.cadcc.ramitos.config.HttpConfig
+import cl.cadcc.ramitos.config.DccLoginConfig
 
-private def makeRoutes[Alg[_[_,_,_,_,_]], F[_]](impl: FunctorAlgebra[Alg, F])(using ctx: RamitosContext[F])(using Service[Alg], Concurrent[F]) =
-    val logger = ctx.logging.getLoggerFromClass(impl.getClass())
-    SimpleRestJsonBuilder
-        .routes(impl)
-        .middleware(ctx.auth.middleware)
-        .resource
 
 def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
+    val redir = RedirectMiddleware.of[IO]
+
+    def makeRoutes[Alg[_[_,_,_,_,_]]](impl: FunctorAlgebra[Alg, IO])(using ctx: RamitosContext[IO])(using Service[Alg]) =
+        val logger = ctx.logging.getLoggerFromClass(impl.getClass())
+        SimpleRestJsonBuilder
+            .routes(impl)
+            .middleware(ctx.auth.middleware)
+            .middleware(redir)
+            .resource
+
+    given HttpConfig = ctx.config.http
+    given DccLoginConfig = ctx.config.auth.dccLogin
+
     for {
 //        strm <-
         woof <- makeRoutes(WoofImpl[IO])
-        auth <- makeRoutes(AuthenticationImpl[IO])
+        authAlg <- Authentication.ofAsync[IO].toResource
+        auth <- makeRoutes(authAlg)
         acc  <- makeRoutes(AccountImpl[IO])
         cour <- makeRoutes(CourseImpl[IO])
         rew  <- makeRoutes(ReviewImpl[IO])
         arew <- makeRoutes(AnonymousReviewImpl[IO])
         docs <- Resource.pure(Docs.docs[IO])
     } yield woof
-        <+> auth
+        // <+> auth
         <+> acc
         <+> cour
         <+> rew

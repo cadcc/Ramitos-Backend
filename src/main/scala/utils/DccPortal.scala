@@ -3,64 +3,115 @@ package cl.cadcc.ramitos.utils
 import cats.*
 import cats.effect.Concurrent
 import cats.syntax.all.*
-import cl.cadcc.ramitos.config.DccLogin
+import doobie.syntax.all.*
 import io.circe.{Codec, Decoder}
 import org.http4s.Uri
 import org.http4s.circe.*
 import org.http4s.client.Client
 import org.typelevel.log4cats.{Logger, LoggerFactory}
+import pureconfig.ConfigReader.Result
+import cl.cadcc.ramitos.utils.PortalDcc.ValidationError
+import cl.cadcc.ramitos.utils.PortalDcc.PortalUser
+import cl.cadcc.ramitos.config.PortalDccConfig
+import cats.effect.MonadCancelThrow
+import cl.cadcc.ramitos.JwtTokens
+import cats.data.OptionT
+import cats.effect.Clock
+import cats.data.EitherT
+import cl.cadcc.ramitos.model.UcampusLogin
+import cl.cadcc.ramitos.schema.AccountService
+import cl.cadcc.ramitos.repository.UcampusLoginRepository
+import cl.cadcc.ramitos.model.Account
+import doobie.util.transactor.Transactor
+import cl.cadcc.ramitos.JwtJsonException
+import cl.cadcc.ramitos.JwtValidationException
 
-trait DccPortal[F[_]] {
-    def getUser(username: String, secret: String): F[Option[DccPortal.PortalUser]]
+trait PortalDcc[F[_]] {
+    def authUri: F[Uri]
+    def validate(queryParams: Map[String, String]): F[Either[ValidationError, (Account, UcampusLogin)]]
 }
 
-object DccPortal {
+object PortalDcc {
 
-    def apply[F[_]](using ev: DccPortal[F]): DccPortal[F] = ev
+    def apply[F[_]](using ev: PortalDcc[F]): PortalDcc[F] = ev
 
-    case class PortalPersona(email: Option[String], alias: Option[String], foto: Option[Uri]) derives Codec
+    sealed abstract class ValidationError(val message: String, val cause: Throwable) extends Exception(message, cause)
+    case class JwtValidationError(override val cause: Throwable) extends ValidationError("Failed to validate JWT signature", cause)
+    case class CallbackFormatError(override val message: String) extends ValidationError(message, null)
+    case class NonceError(override val message: String) extends ValidationError(message, null)
+    case class InvariantBroken(override val message: String) extends ValidationError(message, null)
 
-    case class PortalUser(
-        username: String,
-        email: Option[String],
-        first_name: String,
-        last_name: String,
-        persona: Option[PortalPersona],
-    ) derives Codec
+    private case class CallbackData(
+        sub: String,
+        full_name: String,
+        given_name: String,
+        family_name: String,
+        social_name: String,
+        preferred_username: String,
+        email: String,
+        picture: String,
+        identification: String,
+    )
 
-    private given Decoder[Option[PortalUser]] = 
-        Decoder.instance[Option[PortalUser]] { c => 
-            c.get[Boolean]("valid").flatMap { b =>
-                if b then c.as[PortalUser].map(Some.apply)
-                else None.asRight
+    private final case class PortalUser(
+        ucampusId: String,
+        displayName: String,
+    )
+
+    private class PortalDccImpl[
+        F[_]: {
+            MonadCancelThrow as F,
+            Transactor as xa,
+            Clock}
+    ](using
+        config: PortalDccConfig,
+        jwtTokens: JwtTokens[F, CallbackData],
+    ) extends PortalDcc[F] {
+        override val authUri: F[Uri] = F.pure(config.baseUrl +? ("app", config.appId))
+
+        override def validate(queryParams: Map[String, String]): F[Either[ValidationError, (Account, UcampusLogin)]] =
+            (for {
+                jwt <- EitherT
+                    .fromOption(
+                        queryParams.get("jwt"),
+                        CallbackFormatError("Missing 'jwt' query parameter."))
+                data <- EitherT(jwtTokens.verifyAccessToken(jwt))
+                    .leftMap[ValidationError](JwtValidationError.apply)
+                mufasaId <- EitherT.fromEither(obtainMufasaId(data.identification))
+                // TODO: verify mufasaId?
+                ans <- EitherT(
+                    UcampusLoginRepository.getOrCreateAccount(
+                        ucampusUsername = mufasaId,
+                        mufasaId = mufasaId,
+                        name = computeDisplayName(data))
+                    .transact(xa)
+                    .map(_.asRight[ValidationError]))
+            } yield ans).value
+
+        private def computeDisplayName(data: CallbackData): String =
+            val root =
+                if data.social_name.length >= 1 then
+                    data.social_name
+                else data.given_name
+            val fstSpace = root.indexWhere(_ == ' ') match {
+                case -1 => root.length
+                case n => n
             }
-        }
-
-    def ofConcurrent[F[_] : {Concurrent, LoggerFactory}](client: Client[F], conf: DccLogin): DccPortal[F] =
-        DccPortalImpl[F](client, conf)
-
-    private case class Credentials(username: String, secret: String) derives Codec
-
-    private class DccPortalImpl[F[_] : {Concurrent as F, LoggerFactory}](client: Client[F], conf: DccLogin) extends DccPortal[F] {
-        private val logger: Logger[F] = LoggerFactory[F].getLogger
-
-
-        private val SSO_URL: Uri = conf.baseUrl
-        private val SSO_APP = conf.appName
-        private val SSO_AUTH = "DJANGO_SSO_AUTH"
-        private val withPath: Uri = SSO_URL.withPath("/is_valid")
-
-        def getUser(username: String, secret: String): F[Option[PortalUser]] =
-            val withQuery: Uri = withPath
-                .withQueryParam("app", SSO_APP)
-                .withQueryParam("username", username)
-                .withQueryParam("secret", secret)
-            client.get(withQuery) { res => 
-                res.bodyText
-                .compile
-                .onlyOrError
-                .flatMap { s => logger.info(s"Got response $s") }
-                *> res.decodeJson[Option[PortalUser]]
-            }
+            root.substring(0, fstSpace)
+        
+        private def obtainMufasaId(id: String): Either[ValidationError, String] =
+            for {
+                idStrip = id.strip()
+                len = idStrip.length
+                _ <- Either.cond(
+                    9 <= len && len <= 15 && idStrip.forall(('0' to '9').contains),
+                    (),
+                    InvariantBroken("Expected identification to be rut-like"))
+                // mufasaId with leading zeros
+                firstNotZero <- idStrip.indexWhere(_ != '0') match {
+                    case -1 => InvariantBroken("Expected identification to be rut-like").asLeft
+                    case n => n.asRight
+                }
+            } yield idStrip.substring(firstNotZero, len-1)
     }
 }

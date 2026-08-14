@@ -3,7 +3,6 @@ package  cl.cadcc.ramitos
 import cats.MonadError
 import cats.syntax.all.*
 import cats.effect.{IO, Sync}
-import com.comcast.ip4s.{Host, Port}
 import org.http4s.Uri
 import pureconfig.*
 import pureconfig.error.{ConfigReaderFailures, ConvertFailure, UserValidationFailed}
@@ -11,6 +10,11 @@ import pureconfig.generic.derivation.*
 import pureconfig.module.catseffect.syntax.*
 import pureconfig.module.http4s.*
 import pureconfig.module.ip4s.*
+import com.comcast.ip4s.Host
+import com.comcast.ip4s.Port
+import org.http4s.Uri.{Host => h4sHost}
+import org.http4s.Uri.Scheme
+import org.http4s.Uri.Authority
 
 object config {
     case class DbCredentials(
@@ -38,11 +42,6 @@ object config {
         pepper: Option[String]
     ) derives ConfigReader
 
-    case class DccLogin(
-        baseUrl: Uri,
-        appName: String
-    ) derives ConfigReader
-
     case class JwtConfig(
         secretKey: String,
         accessTokenLifeSeconds: Long,
@@ -50,16 +49,38 @@ object config {
         leewaySeconds: Long
     ) derives ConfigReader
 
+    case class PortalDccConfig(
+        baseUrl: Uri,
+        appId: String,
+        signingKey: String,
+    ) derives ConfigReader
+
+    case class DccLoginConfig(
+        loginTimeLimitSeconds: Long,
+    ) derives ConfigReader
+
     case class AuthConfig(
         bcrypt: BcryptConfig,
-        dccLogin: DccLogin,
+        portalDcc: PortalDccConfig,
+        dccLogin: DccLoginConfig,
         jwt: JwtConfig
     ) derives ConfigReader
 
     case class HttpConfig(
         host: Host,
-        port: Port
-    ) derives ConfigReader
+        port: Port,
+        ssl : Boolean,
+    ) derives ConfigReader {
+        val scheme: Scheme = if ssl then Scheme.https else Scheme.http
+        val authority: Authority = Authority(
+            host = h4sHost.fromIp4sHost(host),
+            port = port.value.some
+        )
+        val baseUri: Uri = Uri(
+            scheme = scheme.some,
+            authority = authority.some,
+        )
+    }
 
     case class MufasaConfig(
         baseUrl: Uri,

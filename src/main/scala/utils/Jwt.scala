@@ -24,24 +24,29 @@ import scala.util.Failure
 import pdi.jwt.JwtOptions
 import javax.security.auth.login.CredentialExpiredException
 import javax.security.auth.login.CredentialException
+import cats.data.EitherT
+import cats.effect.MonadCancelThrow
 
 trait JwtTokens[F[_], Payload] {
-    def verifyAccessToken(token: String): F[Try[Payload]]
+    def verifyAccessToken(token: String): F[Either[JwtException, Payload]]
     def makeAccessToken(data: Payload): F[String]
 }
 
-sealed trait JwtException(reason: String, cause: Option[Throwable]) extends Exception
-case class JwtJsonException(reason: String, cause: Throwable) extends JwtException(reason, cause.some)
-case class JwtValidationException(reason: String) extends JwtException(reason, None)
+sealed abstract class JwtException(reason: String, cause: Throwable) extends Exception(reason, cause)
+case class JwtJsonException(reason: String, cause: Throwable) extends JwtException(reason, cause)
+case class JwtValidationException(reason: String) extends JwtException(reason, null)
 
 object JwtTokens {
 
     def apply[F[_], E](using ev: JwtTokens[F, E]) = ev
 
-    def ofClock[F[_], E](conf: JwtConfig)(using Clock[F], Codec[E]): JwtTokens[F, E] = JwtTokensImpl(conf)
+    def ofClock[F[_]: {MonadCancelThrow, Clock}, E: Codec](conf: JwtConfig): JwtTokens[F, E] = JwtTokensImpl(conf)
 
-    private class JwtTokensImpl[F[_], E](private val conf: JwtConfig)(using clk: Clock[F], codec: Codec[E]) extends JwtTokens[F, E] {
-        given app: Applicative[F] = clk.applicative
+    private class JwtTokensImpl[
+        F[_] : {MonadCancelThrow as F,
+                Clock as clk},
+        E    : {Codec as codec}
+    ](private val conf: JwtConfig) extends JwtTokens[F, E] {
 
         private val secretKey = conf.secretKey
         private val algo = JwtAlgorithm.HS256
@@ -55,18 +60,20 @@ object JwtTokens {
             leeway = 0
         )
 
-        def verifyAccessToken(token: String): F[Try[E]] =
-            JavaTime[F].getEpochSeconds.map(now =>
-                for {
-                    claims <- JwtCirce.decode(token, secretKey, Seq(algo), jwtOptions).adaptErr {
-                        case e : LibJwtException => JwtValidationException(e.getMessage())
-                    }
-                    _ <- verifyTokenTime(claims, now)
-                    session <- decode[E](claims.content) match
-                        case Left(value) => Failure(JwtJsonException("The JWT content was not deserializable into a Session instance.", value))
-                        case Right(value) => Success(value)
-                } yield session
-            )
+        def verifyAccessToken(token: String): F[Either[JwtException, E]] =
+            (for {
+                now <- EitherT(clk.realTimeInstant.map(_.getEpochSecond().asRight[JwtException]))
+                claimsF =
+                    JwtCirce.decode(token, secretKey, Seq(algo), jwtOptions) match
+                      case Failure(e : LibJwtException) => JwtJsonException("Failed to parse JWT claims", e).asLeft.pure
+                      case Failure(e) => e.raiseError
+                      case Success(value) => value.asRight.pure
+                claims <- EitherT(claimsF)
+                _ <- EitherT.fromEither(verifyTokenTime(claims, now))
+                session <- EitherT.fromEither(
+                    decode[E](claims.content)
+                        .leftMap[JwtException](err => JwtJsonException("The JWT content was not deserializable into a Session instance.", err)))
+            } yield session).value
 
         def makeAccessToken(data: E): F[String] =
             JavaTime[F].getInstant.map(now =>
@@ -80,16 +87,16 @@ object JwtTokens {
                 JwtCirce.encode(claims, secretKey, algo)
             )
         
-        private def verifyTokenTime(claims: JwtClaim, epochSeconds: Long): Try[Unit] =
+        private def verifyTokenTime(claims: JwtClaim, epochSeconds: Long): Either[JwtException, Unit] =
             for {
                 _ <- claims.expiration match
-                        case Some(value) if epochSeconds <= value + leeway.toSeconds => Success(())
-                        case None => Success(())
-                        case _ => Failure(JwtValidationException("The token has expired."))
+                        case Some(value) if epochSeconds <= value + leeway.toSeconds => ().asRight
+                        case None => ().asRight
+                        case _ => JwtValidationException("The token has expired.").asLeft
                 _ <- claims.notBefore match
-                        case Some(value) if value <= epochSeconds + leeway.toSeconds => Success(())
-                        case None => Success(())
-                        case _ => Failure(JwtValidationException("The token was provided before is valid."))
+                        case Some(value) if value <= epochSeconds + leeway.toSeconds => ().asRight
+                        case None => ().asRight
+                        case _ => JwtValidationException("The token was provided before is valid.").asLeft
             } yield ()
     }
 }

@@ -1,9 +1,11 @@
 package cl.cadcc.ramitos.middleware
 
 import cl.cadcc.ramitos.utils.extensions.*
+import cats.effect.syntax.all.*
 import cats.syntax.all.*
 import cats.effect.IO
 import cats.effect.IOLocal
+import cats.data.EitherT
 import cl.cadcc.ramitos.utils.*
 import cats.mtl.Local
 import smithy4s.http4s.ServerEndpointMiddleware
@@ -39,6 +41,7 @@ import org.http4s.headers.`WWW-Authenticate`
 import io.circe.Json
 import org.http4s.dsl.impl.Responses.UnauthorizedOps
 import cl.cadcc.ramitos.JwtValidationException
+import cats.effect.MonadCancelThrow
 
 trait AuthMiddleware[F[_], E] {
     val askSession: Ask[F, E]
@@ -100,9 +103,8 @@ object AuthMiddleware {
                         )))
                         .getM
                 session <-
-                    JwtTokens[F, T].verifyAccessToken(token)
-                        .flatMap(_.getM)
-                        .adaptErr {
+                    EitherT(JwtTokens[F, T].verifyAccessToken(token))
+                        .leftMap {
                             case JwtJsonException(reason, cause) => new NotAuthenticated(
                                 reason = reason.some,
                                 message = cause.getClass.getCanonicalName.some
@@ -111,7 +113,7 @@ object AuthMiddleware {
                                 reason = "JWT could not be validated".some,
                                 message = reason.some
                             )
-                        }
+                        }.rethrowT
                 response <- localSession.scope(app(req))(session.some)
             } yield response
         }

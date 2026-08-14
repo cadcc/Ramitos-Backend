@@ -5,13 +5,13 @@ import cats.data.NonEmptyList
 import cats.effect.*
 import cats.effect.std.SystemProperties
 import cats.syntax.all.*
-import cl.cadcc.ramitos.config.{DbConfig, DccLogin, TagSettings}
+import cl.cadcc.ramitos.config.{DbConfig, TagSettings}
 import cl.cadcc.ramitos.middleware.AuthMiddleware
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.repository.{CourseRepository, ReviewRepository}
 import cl.cadcc.ramitos.routes.restRoutes
 import cl.cadcc.ramitos.schema.NotAuthenticated
-import cl.cadcc.ramitos.utils.{Crypto, DccPortal}
+import cl.cadcc.ramitos.utils.{Crypto}
 import com.zaxxer.hikari.HikariConfig as HikariConfiguration
 import doobie.hikari.HikariTransactor
 import doobie.util.log.LogHandler
@@ -62,9 +62,7 @@ object Main extends IOApp {
             client <- EmberClientBuilder.default[IO].build
             courseRepository = CourseRepository.ofConf(conf.app.tags)
             reviewRepository = ReviewRepository.ofCourseRepository(courseRepository)
-            dccPortal = DccPortal.ofConcurrent(client, conf.auth.dccLogin)
-//            _ = crypto.hashPassword("mish123")
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, dccPortal)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, ???)
 
     override def run(args: List[String]): IO[ExitCode] =
         resources.flatMap {rctx =>

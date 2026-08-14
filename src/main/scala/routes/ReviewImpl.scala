@@ -13,7 +13,6 @@ import cl.cadcc.ramitos.repository.ReviewRepository
 import cl.cadcc.ramitos.routes.utils.*
 import cl.cadcc.ramitos.schema
 import cl.cadcc.ramitos.schema.{DuplicatedEntity, InsufficientPermissions, ListReviewsOutput, NotFound, Review, ReviewService, ReviewStats}
-import cl.cadcc.ramitos.utils.Shapeless.schemaConvert
 import doobie.Transactor
 import doobie.syntax.all.*
 import smithy4s.time.Timestamp
