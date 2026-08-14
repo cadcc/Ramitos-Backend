@@ -35,6 +35,17 @@ object PortalDcc {
 
     def apply[F[_]](using ev: PortalDcc[F]): PortalDcc[F] = ev
 
+    def ofConf[
+        F[_]: {
+            MonadCancelThrow,
+            Transactor,
+            Clock},
+    ](config: PortalDccConfig)
+    : PortalDcc[F] =
+        given PortalDccConfig = config
+        given JwtTokens[F, CallbackData] = JwtTokens.ofClock(config.jwt)
+        PortalDccImpl[F]
+
     sealed abstract class ValidationError(val message: String, val cause: Throwable) extends Exception(message, cause)
     case class JwtValidationError(override val cause: Throwable) extends ValidationError("Failed to validate JWT signature", cause)
     case class CallbackFormatError(override val message: String) extends ValidationError(message, null)
@@ -51,7 +62,7 @@ object PortalDcc {
         email: String,
         picture: String,
         identification: String,
-    )
+    ) derives Codec
 
     private final case class PortalUser(
         ucampusId: String,

@@ -52,7 +52,7 @@ object config {
     case class PortalDccConfig(
         baseUrl: Uri,
         appId: String,
-        signingKey: String,
+        jwt: JwtConfig
     ) derives ConfigReader
 
     case class DccLoginConfig(

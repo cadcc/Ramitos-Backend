@@ -11,7 +11,7 @@ import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.repository.{CourseRepository, ReviewRepository}
 import cl.cadcc.ramitos.routes.restRoutes
 import cl.cadcc.ramitos.schema.NotAuthenticated
-import cl.cadcc.ramitos.utils.{Crypto}
+import cl.cadcc.ramitos.utils.{Crypto, PortalDcc}
 import com.zaxxer.hikari.HikariConfig as HikariConfiguration
 import doobie.hikari.HikariTransactor
 import doobie.util.log.LogHandler
@@ -56,35 +56,36 @@ object Main extends IOApp {
             configFile <- SystemProperties[IO].get("ramitos.configFile").toResource
             conf <- RamitosConfig.load[IO](configFile).toResource
             xa <- getTransactor(conf.db)
+            given Transactor[IO] = xa
             crypto <- Crypto.ofConf(conf.auth.bcrypt).pure[ResourceIO]
             jwt <- JwtTokens.ofClock[IO, Session](conf.auth.jwt).pure[ResourceIO]
+            portalDcc <- PortalDcc.ofConf[IO](conf.auth.portalDcc).pure[ResourceIO]
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
             client <- EmberClientBuilder.default[IO].build
             courseRepository = CourseRepository.ofConf(conf.app.tags)
             reviewRepository = ReviewRepository.ofCourseRepository(courseRepository)
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, ???)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, portalDcc)
 
     override def run(args: List[String]): IO[ExitCode] =
-        resources.flatMap {rctx =>
-            given ctx: RamitosContext[IO] = rctx
-
-            for {
-                routes <- restRoutes
-                server <- EmberServerBuilder.default[IO]
-                    .withHost(ctx.config.http.host)
-                    .withPort(ctx.config.http.port)
-                    .withHttpApp(routes.orNotFound)
-                    .withErrorHandler({
-                        case e @ NotAuthenticated(reason, message) =>
-                            Unauthorized(
-                                `WWW-Authenticate`(NonEmptyList.one(Challenge("Bearer", "ramitos"))),
-                                e.asJson)
-                        case t =>
-                            mainLogger.error(t)("Internal Server Error")
-                            *> MonadThrow[IO].raiseError(t)
-                    })
-                    .build
-            } yield server
-        }.use { _ => IO.never }
+        (for {
+            ctx <- resources
+            given RamitosContext[IO] = ctx
+            routes <- restRoutes
+            server <- EmberServerBuilder.default[IO]
+                .withHost(ctx.config.http.host)
+                .withPort(ctx.config.http.port)
+                .withHttpApp(routes.orNotFound)
+                .withErrorHandler({
+                    case e @ NotAuthenticated(reason, message) =>
+                        Unauthorized(
+                            `WWW-Authenticate`(NonEmptyList.one(Challenge("Bearer", "ramitos"))),
+                            e.asJson)
+                    case t =>
+                        mainLogger.error(t)("Internal Server Error")
+                        *> MonadThrow[IO].raiseError(t)
+                })
+                .build
+         } yield server)
+        .use { _ => IO.never }
         .as(ExitCode.Success)
 }
