@@ -124,15 +124,15 @@ object Authentication {
 
         private def validateRedirect(redirect: Option[Uri]): Either[CallbackRejected, Uri] =
             redirect match
-              case None => httpConfig.baseUri.pure
+              case None => httpConfig.externalUri.pure
               case Some(uri) =>
                 for {
                     _ <- uri.scheme.traverse { scheme =>
-                        Either.raiseUnless(scheme == httpConfig.scheme)(CallbackRejected()) }
-                    _ <- Either.raiseUnless(uri.authority == httpConfig.authority)(CallbackRejected())
+                        Either.raiseUnless(scheme == httpConfig.externalScheme)(CallbackRejected()) }
+                    _ <- Either.raiseUnless(uri.authority == httpConfig.externalAuthority)(CallbackRejected())
                 } yield uri.copy(
-                        scheme = httpConfig.scheme.some,
-                        authority = httpConfig.authority.some
+                        scheme = httpConfig.externalScheme.some,
+                        authority = httpConfig.externalAuthority.some
                     )
 
         private val cookieName = "WorkflowDccLogin"
@@ -164,7 +164,7 @@ object Authentication {
             } yield DccLoginStartOutput(portalUri.toString, cookie)
 
         private val encoder = Base64.getEncoder
-        private val startUri = httpConfig.baseUri / "api" / "workflow" / "login" / "dcc" / "start"
+        private val startUri = httpConfig.externalUri / "api" / "workflow" / "login" / "dcc" / "start"
 
         private def getWorkflowState(cookies: String): F[Ref[F, Option[DccLoginState]]] =
             for {

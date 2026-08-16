@@ -67,19 +67,32 @@ object config {
     ) derives ConfigReader
 
     case class HttpConfig(
-        host: Host,
-        port: Port,
+        bindHost: Host,
+        bindPort: Port,
         ssl : Boolean,
+        private val baseUri: Option[Uri],
     ) derives ConfigReader {
-        val scheme: Scheme = if ssl then Scheme.https else Scheme.http
-        val authority: Authority = Authority(
-            host = h4sHost.fromIp4sHost(host),
-            port = port.value.some
+        val localScheme: Scheme = if ssl then Scheme.https else Scheme.http
+        val localAuthority: Authority = Authority(
+            host = h4sHost.fromIp4sHost(bindHost),
+            port = bindPort.value.some
         )
-        val baseUri: Uri = Uri(
-            scheme = scheme.some,
-            authority = authority.some,
+        val localUri: Uri = Uri(
+            scheme = localScheme.some,
+            authority = localAuthority.some,
         )
+        val externalScheme: Scheme = baseUri match {
+            case Some(uri) => uri.scheme.getOrElse(localScheme)
+            case None => localScheme
+        }
+        val externalAuthority: Authority = baseUri match {
+            case Some(uri) => uri.authority.getOrElse(localAuthority)
+            case None => localAuthority
+        }
+        val externalUri: Uri = baseUri match {
+            case Some(uri) => uri
+            case None => localUri
+        }
     }
 
     case class MufasaConfig(

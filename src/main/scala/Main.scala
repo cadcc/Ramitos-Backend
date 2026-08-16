@@ -72,8 +72,8 @@ object Main extends IOApp {
             given RamitosContext[IO] = ctx
             routes <- restRoutes
             server <- EmberServerBuilder.default[IO]
-                .withHost(ctx.config.http.host)
-                .withPort(ctx.config.http.port)
+                .withHost(ctx.config.http.bindHost)
+                .withPort(ctx.config.http.bindPort)
                 .withHttpApp(routes.orNotFound)
                 .withErrorHandler({
                     case e @ NotAuthenticated(reason, message) =>
