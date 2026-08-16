@@ -69,10 +69,9 @@ object config {
     case class HttpConfig(
         bindHost: Host,
         bindPort: Port,
-        ssl : Boolean,
         private val baseUri: Option[Uri],
     ) derives ConfigReader {
-        val localScheme: Scheme = if ssl then Scheme.https else Scheme.http
+        val localScheme: Scheme = Scheme.http
         val localAuthority: Authority = Authority(
             host = h4sHost.fromIp4sHost(bindHost),
             port = bindPort.value.some
