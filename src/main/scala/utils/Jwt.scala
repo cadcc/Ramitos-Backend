@@ -26,6 +26,7 @@ import javax.security.auth.login.CredentialExpiredException
 import javax.security.auth.login.CredentialException
 import cats.data.EitherT
 import cats.effect.MonadCancelThrow
+import org.typelevel.log4cats.LoggerFactory
 
 trait JwtTokens[F[_], Payload] {
     def verifyAccessToken(token: String): F[Either[JwtException, Payload]]
@@ -40,13 +41,15 @@ object JwtTokens {
 
     def apply[F[_], E](using ev: JwtTokens[F, E]) = ev
 
-    def ofClock[F[_]: {MonadCancelThrow, Clock}, E: Codec](conf: JwtConfig): JwtTokens[F, E] = JwtTokensImpl(conf)
+    def ofClock[F[_]: {MonadCancelThrow, LoggerFactory, Clock}, E: Codec](conf: JwtConfig): JwtTokens[F, E] = JwtTokensImpl(conf)
 
     private class JwtTokensImpl[
         F[_] : {MonadCancelThrow as F,
+                LoggerFactory as logging,
                 Clock as clk},
         E    : {Codec as codec}
     ](private val conf: JwtConfig) extends JwtTokens[F, E] {
+        private val logger = logging.getLogger
 
         private val secretKey = conf.secretKey
         private val algo = JwtAlgorithm.HS256

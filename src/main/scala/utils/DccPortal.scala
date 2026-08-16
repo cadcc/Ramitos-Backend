@@ -11,7 +11,6 @@ import org.http4s.client.Client
 import org.typelevel.log4cats.{Logger, LoggerFactory}
 import pureconfig.ConfigReader.Result
 import cl.cadcc.ramitos.utils.PortalDcc.ValidationError
-import cl.cadcc.ramitos.utils.PortalDcc.PortalUser
 import cl.cadcc.ramitos.config.PortalDccConfig
 import cats.effect.MonadCancelThrow
 import cl.cadcc.ramitos.JwtTokens
@@ -39,6 +38,7 @@ object PortalDcc {
         F[_]: {
             MonadCancelThrow,
             Transactor,
+            LoggerFactory,
             Clock},
     ](config: PortalDccConfig)
     : PortalDcc[F] =
@@ -53,7 +53,6 @@ object PortalDcc {
     case class InvariantBroken(override val message: String) extends ValidationError(message, null)
 
     private case class CallbackData(
-        sub: String,
         full_name: String,
         given_name: String,
         family_name: String,
@@ -64,10 +63,6 @@ object PortalDcc {
         identification: String,
     ) derives Codec
 
-    private final case class PortalUser(
-        ucampusId: String,
-        displayName: String,
-    )
 
     private class PortalDccImpl[
         F[_]: {
