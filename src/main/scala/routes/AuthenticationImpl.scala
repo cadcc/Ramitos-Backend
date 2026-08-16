@@ -139,11 +139,11 @@ object Authentication {
 
         override def dccLoginStart(redirect: Option[String]): F[DccLoginStartOutput] =
             for {
-                now <- clk.realTimeInstant
                 uuid <- uuidGen.randomUUID.map(_.toString)
                 redirectUri <- redirect.traverse { str =>
                     EitherT.fromEither(Uri.fromString(str)).rethrowT
                 }
+                now <- clk.realTimeInstant
                 finalRedirect <- EitherT.fromEither(validateRedirect(redirectUri)).rethrowT
                 state = WaitingCallback(
                     redirect = finalRedirect,
@@ -160,7 +160,7 @@ object Authentication {
                 }.flatten
                 portalUri <- portal.authUri
                 maxAge = dccLoginConfig.loginTimeLimitSeconds * 3
-                cookie = s"${cookieName}=\"${uuid}\"; Path=/api/workflow/login/dcc; HttpOnly; Max-Age=${maxAge}"
+                cookie = s"${cookieName}=${uuid}; Path=/api/workflow/login/dcc; HttpOnly; Max-Age=${maxAge}"
             } yield DccLoginStartOutput(portalUri.toString, cookie)
 
         private val encoder = Base64.getEncoder
@@ -180,16 +180,16 @@ object Authentication {
         
         override def dccLoginCallback(params: Map[String, String], cookies: String): F[DccLoginCallbackOutput] =
             for {
-                now <- clk.realTimeInstant
                 stoState <- getWorkflowState(cookies)
                 secret <- rand.nextBytes(24)
                     .map(encoder.encode)
                     .map(arr => String(arr, StandardCharsets.UTF_8))
                 (acc, login) <- EitherT(portal.validate(params))
-                    .leftSemiflatTap {err => logger.trace(err)("error when validating JWT from Portal DCC callback.") }
+                    .leftSemiflatTap {err => logger.debug(err)("error when validating JWT from Portal DCC callback.") }
                     .leftMap(err => CallbackRejected())
                     .rethrowT
 
+                now <- clk.realTimeInstant
                 state = WaitingTokenExchange(
                     acc,
                     secret,
@@ -210,12 +210,13 @@ object Authentication {
 
         override def dccLoginExchangeTokens(secret: String, cookies: String): F[SessionTokens] =
             for {
-                now <- clk.realTimeInstant
                 stoState <- getWorkflowState(cookies)
+
+                now <- clk.realTimeInstant
                 (acc, expectedSecret) <-
                     stoState.modify {
-                         case None => (
-                             None,
+                         case old@None => (
+                             old,
                              F.raiseError(WorkflowTimeout(startUri.toString)))
                          case old @ Some(WaitingCallback(_, _)) => (
                              old,
