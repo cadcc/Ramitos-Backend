@@ -53,7 +53,7 @@ object PortalDcc {
     case class InvariantBroken(override val message: String) extends ValidationError(message, null)
 
     private case class CallbackData(
-        full_name: String,
+        name: String,
         given_name: String,
         family_name: String,
         social_name: String,
