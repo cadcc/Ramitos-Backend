@@ -186,7 +186,7 @@ object Authentication {
                     .map(encoder.encode)
                     .map(arr => String(arr, StandardCharsets.UTF_8))
                 (acc, login) <- EitherT(portal.validate(params))
-                // TODO: debug messages
+                    .leftSemiflatTap {err => logger.trace(err)("error when validating JWT from Portal DCC callback.") }
                     .leftMap(err => CallbackRejected())
                     .rethrowT
 
