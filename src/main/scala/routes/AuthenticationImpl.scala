@@ -122,19 +122,6 @@ object Authentication {
                 accessToken <- JwtTokens[F, Session].makeAccessToken(session)
             } yield SessionTokens(accessToken)
 
-        private def validateRedirect(redirect: Option[Uri]): Either[CallbackRejected, Uri] =
-            redirect match
-              case None => httpConfig.externalUri.pure
-              case Some(uri) =>
-                for {
-                    _ <- uri.scheme.traverse { scheme =>
-                        Either.raiseUnless(scheme == httpConfig.externalScheme)(CallbackRejected()) }
-                    _ <- Either.raiseUnless(uri.authority == httpConfig.externalAuthority)(CallbackRejected())
-                } yield uri.copy(
-                        scheme = httpConfig.externalScheme.some,
-                        authority = httpConfig.externalAuthority.some
-                    )
-
         private val cookieName = "WorkflowDccLogin"
 
         override def dccLoginStart(redirect: Option[String]): F[DccLoginStartOutput] =
@@ -144,7 +131,7 @@ object Authentication {
                     EitherT.fromEither(Uri.fromString(str)).rethrowT
                 }
                 now <- clk.realTimeInstant
-                finalRedirect <- EitherT.fromEither(validateRedirect(redirectUri)).rethrowT
+                finalRedirect <- EitherT.fromEither(httpConfig.makeRedirect(redirectUri)).rethrowT
                 state = WaitingCallback(
                     redirect = finalRedirect,
                     expiresAt = now.plusSeconds(dccLoginConfig.loginTimeLimitSeconds),

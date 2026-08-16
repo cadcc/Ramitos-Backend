@@ -15,6 +15,7 @@ import com.comcast.ip4s.Port
 import org.http4s.Uri.{Host => h4sHost}
 import org.http4s.Uri.Scheme
 import org.http4s.Uri.Authority
+import cl.cadcc.ramitos.schema.CallbackRejected
 
 object config {
     case class DbCredentials(
@@ -69,6 +70,7 @@ object config {
     case class HttpConfig(
         bindHost: Host,
         bindPort: Port,
+        validateRedirects: Boolean,
         private val baseUri: Option[Uri],
     ) derives ConfigReader {
         val localScheme: Scheme = Scheme.http
@@ -92,6 +94,26 @@ object config {
             case Some(uri) => uri
             case None => localUri
         }
+
+        def makeRedirect(wanted: Option[Uri]): Either[CallbackRejected, Uri] =
+            wanted match {
+                case None => externalUri.asRight
+                case Some(uri) if !validateRedirects =>
+                    uri.copy(
+                        scheme = externalScheme.some,
+                        authority = externalAuthority.some
+                    ).asRight
+                case Some(uri) =>
+                    for {
+                        _ <- uri.scheme.traverse { scheme =>
+                            Either.raiseUnless(scheme == externalScheme)(CallbackRejected()) }
+                        _ <- uri.authority.traverse { authority =>
+                            Either.raiseUnless(authority == externalAuthority)(CallbackRejected()) }
+                    } yield uri.copy(
+                            scheme = externalScheme.some,
+                            authority = externalAuthority.some
+                        )
+            }
     }
 
     case class MufasaConfig(
