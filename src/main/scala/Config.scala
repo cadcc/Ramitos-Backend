@@ -100,8 +100,8 @@ object config {
                 case None => externalUri.asRight
                 case Some(uri) if !validateRedirects =>
                     uri.copy(
-                        scheme = externalScheme.some,
-                        authority = externalAuthority.some
+                        scheme = uri.scheme.getOrElse(externalScheme).some,
+                        authority = uri.authority.getOrElse(externalAuthority).some
                     ).asRight
                 case Some(uri) =>
                     for {
