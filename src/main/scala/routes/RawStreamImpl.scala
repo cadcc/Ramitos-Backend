@@ -2,31 +2,34 @@ package cl.cadcc.ramitos.routes
 
 import cats.syntax.all.*
 import cats.effect.Sync
-import cl.cadcc.ramitos.schema.{ByteStream, RawByteStreamsServiceGen, RawGetCoursesStaticDataInput, RawGetCoursesStaticDataOutput}
 import fs2.Stream
 import fs2.io.readInputStream
 import smithy4s.time.Timestamp
+import org.http4s.HttpRoutes
+import org.http4s.implicits.*
+import cats.Monad
+import org.http4s.Response
+import org.http4s.server.middleware.GZip
+import org.http4s.EntityEncoder
+import org.http4s.headers.`Content-Type`
+import org.http4s.MediaType
 
 object RawStreamImpl {
-    type SOMatch[T] = T match {
-        case ByteStream => Byte
-    }
-    type Streamming[F[_]] = [_, _, O, _, SO] =>> F[(O, Stream[F, SOMatch[SO]])]
 
-    def make[F[_]: Sync]: RawByteStreamsServiceGen[Streamming[F]] = RawStreamImpl[F]
+    def routes[F[_]: Sync]: HttpRoutes[F] = Routes[F].routes
 
-    private class RawStreamImpl[F[_]: Sync as F] extends RawByteStreamsServiceGen[Streamming[F]] {
+    private class Routes[F[_]: Sync as F] {
+        val dsl = org.http4s.dsl.Http4sDsl[F]
+        import dsl.*
 
-        /** This operation uses {@literal @}streaming on the output (content).
-         *
-         * HTTP GET /api/courses.json
-         */
-        override def rawGetCoursesStaticData(): F[(RawGetCoursesStaticDataOutput, Stream[F, Byte])] = {
-            val stream = readInputStream(
-                F.blocking { getClass.getClassLoader.getResourceAsStream("courses.json") },
-                chunkSize = 4096
-            )
-            (RawGetCoursesStaticDataOutput(), stream).pure
+        val routes: HttpRoutes[F] = HttpRoutes.of[F] {
+            case GET -> Root / "api" / "courses.json" =>
+                val stream = readInputStream(
+                    F.blocking( getClass.getClassLoader.getResourceAsStream("courses.json") ),
+                    chunkSize = 4096
+                )
+                Ok(stream).map(_.withContentType(`Content-Type`(MediaType.application.json)))
         }
     }
+    
 }

@@ -25,15 +25,14 @@ def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
         val logger = ctx.logging.getLoggerFromClass(impl.getClass())
         SimpleRestJsonBuilder
             .routes(impl)
-            .middleware(ctx.auth.middleware)
-            .middleware(redir)
+            .middleware(ctx.auth.middleware andThen redir)
             .resource
 
     given HttpConfig = ctx.config.http
     given DccLoginConfig = ctx.config.auth.dccLogin
 
     for {
-//        strm <-
+        strm <- Resource.pure(RawStreamImpl.routes[IO])
         woof <- makeRoutes(WoofImpl[IO])
         authAlg <- Authentication.ofAsync[IO].toResource
         auth <- makeRoutes(authAlg)

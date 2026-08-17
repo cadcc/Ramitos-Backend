@@ -48,23 +48,9 @@ operation GetCourse {
 @http(method: "GET", uri: "/api/courses.json")
 @readonly
 operation GetCoursesStaticData {
-  input := {
-//    @httpHeader("If-Modified-Since")
-//    @timestampFormat("http-date")
-//    notModifiedSince: Timestamp
-  }
+  input := {}
 
   output := {
-//    @httpHeader("Date")
-//    @required
-//    @timestampFormat("http-date")
-//    now: Timestamp
-//
-//    @httpHeader("Expires")
-//    @required
-//    @timestampFormat("http-date")
-//    expiresAt: Timestamp
-
     @httpPayload
     @required
     content: CoursesStaticDataContainer
