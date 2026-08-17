@@ -7,7 +7,7 @@ import cl.cadcc.ramitos.schema.{AccountService, AnonymousReviewService, Authenti
 import org.http4s.HttpRoutes
 
 object Docs {
-    def docs[F[_]: Sync]: HttpRoutes[F] = smithy4s.http4s.swagger.docs[F].withPath("/api/docs")(
+    def docs[F[_]: Sync]: HttpRoutes[F] = smithy4s.http4s.swagger.docs[F].withPath("api/docs")(
         AccountService,
         AnonymousReviewService,
         AuthenticationService,
