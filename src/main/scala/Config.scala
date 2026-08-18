@@ -86,6 +86,7 @@ object config {
             case Some(uri) => uri.scheme.getOrElse(localScheme)
             case None => localScheme
         }
+        val externalSsl: Boolean = externalScheme.value == "https"
         val externalAuthority: Authority = baseUri match {
             case Some(uri) => uri.authority.getOrElse(localAuthority)
             case None => localAuthority
