@@ -14,7 +14,7 @@ import scala.language.implicitConversions
 
 trait CourseRepository {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
-    def list(limit: Long, from: Option[String]): Stream[ConnectionIO, Course]
+    def list(limit: Long, codes: Seq[String] = Seq.empty, from: Option[String] = None): Stream[ConnectionIO, Course]
     def create(code: String, name: String): ConnectionIO[Course]
     def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean]
 }
@@ -38,14 +38,16 @@ object CourseRepository {
             sql.query[Course]
                 .option
 
-        def list(limit: Long, from: Option[String]): Stream[ConnectionIO, Course] =
+        def list(limit: Long, codes: Seq[String] = Seq.empty, from: Option[String] = None): Stream[ConnectionIO, Course] =
+            val where = mkWhere(
+                from.map(Table.code > _),
+                if codes.isEmpty then None
+                else Some(Table.code.in(codes)),
+            )
             val sql =
-                fr"SELECT ${Table.all} FROM $Table "
-                    ++ (from match
-                    case Some(value) => fr"WHERE ${Table.code > value}"
-                    case None => fr"")
-                ++
-                fr"ORDER BY ${Table.code} LIMIT $limit"
+                fr"SELECT ${Table.all} FROM $Table"
+                ++ where
+                ++ fr"ORDER BY ${Table.code} LIMIT $limit"
             sql.query[Course].stream
 
         def create(code: String, name: String): ConnectionIO[Course] = {

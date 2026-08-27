@@ -9,6 +9,7 @@ import doobie.*
 import doobie.syntax.all.*
 import cl.cadcc.ramitos.schema.*
 import cl.cadcc.ramitos.model.{Stat, Course as ModelCourse, CourseStat as ModelCourseStat}
+import cl.cadcc.ramitos.utils.extensions.*
 import doobie.util.transactor.Transactor
 import cl.cadcc.ramitos.repository.CourseRepository
 import cats.data.OptionT
@@ -22,7 +23,12 @@ class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRe
         else CourseStat(stat.rate).some
 
     /** HTTP GET /api/courses */
-    override def listCourses(limit: Long, codes: Option[List[String]], after: Option[String]): F[ListCoursesOutput] = ???
+    override def listCourses(limit: Long, codes: Option[List[String]], after: Option[String]): F[ListCoursesOutput] =
+        courseRepository.list(limit, codes.getOrElse(List.empty) , after)
+            .map(modelToSchema)
+            .compile.toList
+            .transact(xa)
+            .map(ListCoursesOutput.apply)
 
     private def modelToSchema(course: ModelCourse): Course =
         Course(

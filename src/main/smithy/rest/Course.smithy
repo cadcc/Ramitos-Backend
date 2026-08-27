@@ -16,7 +16,7 @@ service CourseService {
 operation ListCourses {
   input := {
     @httpQuery("limit")
-    @range(min: 1, max: 50) // removed max. May be dangerous! discuss consequences later.
+    @range(min: 1, max: 50)
     @default(50)
     limit: Long
 
