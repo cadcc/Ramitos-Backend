@@ -40,7 +40,7 @@ object MufasaCacheKeyRepository {
     private given doobieGet: Get[T] = Get[Json].temap(_.as[T].leftMap(_.show))
     private given doobiePut: Put[T] = Put[Json].contramap(_.asJson)
 
-    private val getQuery = fr"SELECT value FROM mufasa_cache_data WHERE key = $_key"
+    private val getQuery = fr"SELECT * FROM mufasa_cache_data WHERE key = $_key"
     
     override def get(forUpdate: Boolean = false): ConnectionIO[Option[Data]] =
       val q = getQuery ++ (if forUpdate then fr"FOR UPDATE SKIP LOCKED" else fr"")
