@@ -58,7 +58,7 @@ CREATE TABLE course_enrollments(
 CREATE TABLE course_enrollment_cache(
     student_mufasa_id VARCHAR(10) PRIMARY KEY REFERENCES accounts(mufasa_id),
     transient_data JSONB NOT NULL DEFAULT '[]',
-    semester_synced_year SMALINT NOT NULL,
+    semester_synced_year SMALLINT NOT NULL,
     semester_synced_type semester NOT NULL,
     last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
