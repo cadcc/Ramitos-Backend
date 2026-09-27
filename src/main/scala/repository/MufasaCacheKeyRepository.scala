@@ -53,13 +53,13 @@ object MufasaCacheKeyRepository {
             value = $value,
             scheduled = $schedule"""
         .update.run
-        .ensure(AssertionError("No rows updated... Something is wrong..."))(_ == 0)
+        .ensure(AssertionError("No rows updated... Something is wrong..."))(_ == 1)
         .void
 
     override def setSchedule(schedule: Instant): ConnectionIO[Unit] =
       sql"UPDATE mufasa_cache_data SET schedule = $schedule WHERE key = $_key"
         .update.run
-        .ensure(AssertionError("No rows updated... Something is wrong..."))(_ == 0)
+        .ensure(AssertionError("No rows updated... Something is wrong..."))(_ == 1)
         .void
   }
 }
