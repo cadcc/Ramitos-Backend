@@ -4,7 +4,7 @@ CREATE TYPE semester as ENUM ('year', 'fall', 'spring', 'summer');
 CREATE TABLE mufasa_cache_data(
     key VARCHAR(25) PRIMARY KEY,
     value JSONB NOT NULL,
-    scheduled TIMESTAMP,
+    scheduled TIMESTAMP
 );
 
 CREATE TABLE accounts(
@@ -13,7 +13,7 @@ CREATE TABLE accounts(
     mufasa_id VARCHAR(10) UNIQUE,
     role account_role NOT NULL DEFAULT 'none',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE passwords(
@@ -60,7 +60,7 @@ CREATE TABLE course_enrollment_cache(
     transient_data JSONB NOT NULL DEFAULT '[]',
     semester_synced_year SMALINT NOT NULL,
     semester_synced_type semester NOT NULL,
-    last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_update TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE reviews(
