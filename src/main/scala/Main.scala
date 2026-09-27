@@ -32,6 +32,9 @@ import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
 import smithy4s.http4s.SimpleRestJsonBuilder
 import cats.effect.std.Supervisor
+import cl.cadcc.ramitos.config.MufasaConfig
+import smithy4s.http4s.ClientEndpointMiddleware
+import cl.cadcc.ramitos.middleware.ClientAuth
 
 object Main extends IOApp {
     given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
@@ -55,12 +58,13 @@ object Main extends IOApp {
 
         HikariTransactor.fromHikariConfig(hikari, logHandler = LogHandler.jdkLogHandler[IO].some)
 
-    private def mufasaClient(client: Client[IO]): Resource[IO, MufasaApi[IO]] =
+    private def mufasaClient(conf: MufasaConfig, client: Client[IO]): Resource[IO, MufasaApi[IO]] =
         SimpleRestJsonBuilder
             .withMaxArity(2048)
             .apply(MufasaApi)
             .client(client)
-            .uri(Uri.unsafeFromString("https://"))
+            .uri(conf.baseUrl)
+            .middleware(ClientAuth.bearer(conf.token))
             .resource
 
     private val resources: Resource[IO, RamitosContext[IO]] =
@@ -69,7 +73,7 @@ object Main extends IOApp {
             conf <- RamitosConfig.load[IO](configFile).toResource
             xa <- getTransactor(conf.db)
             client <- EmberClientBuilder.default[IO].build
-            mufasaClient <- mufasaClient(client)
+            mufasaClient <- mufasaClient(conf.mufasa, client)
             crypto <- Crypto.ofConf(conf.auth.bcrypt).pure[ResourceIO]
             jwt <- JwtTokens.ofClock[IO, Session](conf.auth.jwt).pure[ResourceIO]
             given MufasaApi[IO] = mufasaClient
