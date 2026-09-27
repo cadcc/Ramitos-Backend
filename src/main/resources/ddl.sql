@@ -5,7 +5,7 @@ CREATE TABLE mufasa_cache_data(
     key VARCHAR(25) PRIMARY KEY,
     value JSONB NOT NULL,
     scheduled TIMESTAMP,
-)
+);
 
 CREATE TABLE accounts(
     id SERIAL PRIMARY KEY,
