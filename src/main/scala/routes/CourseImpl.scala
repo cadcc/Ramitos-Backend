@@ -16,14 +16,14 @@ import cats.data.OptionT
 import smithy4s.kinds.PolyFunction5
 import smithy4s.time.Timestamp
 
-class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRepository: CourseRepository) extends CourseService[F] {
+class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRepository: CourseRepository[F]) extends CourseService[F] {
 
     private def statToSchema(stat: ModelCourseStat): Option[CourseStat] =
         if stat.rate.isNaN then None
         else CourseStat(stat.rate).some
 
     /** HTTP GET /api/courses */
-    override def listCourses(limit: Long, codes: Option[List[String]], after: Option[String]): F[ListCoursesOutput] =
+    override def listCourses(limit: Long, codes: Option[List[String]], enrolled: Option[Boolean], reviewable: Option[Boolean], after: Option[String]): F[ListCoursesOutput] =
         courseRepository.list(limit, codes.getOrElse(List.empty) , after)
             .map(modelToSchema)
             .compile.toList
@@ -34,6 +34,7 @@ class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRe
         Course(
             id = course.code,
             name = course.name,
+            reviewCount = ???,
             stats = CourseStats(
                 docencia = statToSchema(course.stats(Stat.DOCENCIA)),
                 vibes = statToSchema(course.stats(Stat.VIBES)),
@@ -42,6 +43,8 @@ class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRe
                 dificultad = statToSchema(course.stats(Stat.DIFICULTAD)),
             ),
             tag_stats = course.tagStats.map { (k, v) => (k, CourseStat(v.rate)) },
+            enrolled = None,
+            reviewable = None,
         )
 
     def getCourse(courseId: String): F[Course] =

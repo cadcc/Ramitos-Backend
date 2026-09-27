@@ -6,13 +6,15 @@ use alloy#simpleRestJson
 use smithy.api#NonEmptyStringList
 
 @simpleRestJson
+@httpBearerAuth
 service CourseService {
-  version: "1.1.0"
+  version: "1.2.0"
   operations: [ListCourses, GetCoursesStaticData, GetCourse]
 }
 
 @http(method: "GET", uri: "/api/courses")
 @readonly
+@optionalAuth
 operation ListCourses {
   input := {
     @httpQuery("limit")
@@ -23,6 +25,12 @@ operation ListCourses {
     @httpQuery("codes")
     @length(min: 1, max: 50)
     codes: CourseListCodes
+
+    @httpQuery("enrolled")
+    enrolled: Boolean
+
+    @httpQuery("reviewable")
+    reviewable: Boolean
 
     @httpQuery("after")
     after: String
@@ -36,6 +44,7 @@ operation ListCourses {
 
 @http(method: "GET", uri: "/api/courses/{courseId}")
 @readonly
+@optionalAuth
 operation GetCourse {
   input := {
     @required
@@ -47,6 +56,7 @@ operation GetCourse {
 
 @http(method: "GET", uri: "/api/courses.json")
 @readonly
+@auth([])
 operation GetCoursesStaticData {
   input := {}
 
@@ -69,10 +79,16 @@ structure Course {
   name: String
 
   @required
+  reviewCount: Integer
+
+  @required
   stats: CourseStats
 
   @required
   tag_stats: CourseTagStats
+
+  enrolled: Boolean
+  reviewable: Boolean
 }
 
 structure CourseStats {

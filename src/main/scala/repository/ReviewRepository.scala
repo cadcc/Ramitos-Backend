@@ -36,9 +36,9 @@ object ReviewRepository {
 
     def apply(using ev: ReviewRepository): ReviewRepository = ev
 
-    def ofCourseRepository(cr: CourseRepository) : ReviewRepository = ReviewRepositoryImpl(cr)
+    def ofCourseRepository(cr: CourseRepositoryOps) : ReviewRepository = ReviewRepositoryImpl(cr)
 
-    private class ReviewRepositoryImpl(courseRepository: CourseRepository) extends ReviewRepository {
+    private class ReviewRepositoryImpl(courseRepository: CourseRepositoryOps) extends ReviewRepository {
         private val Table = Review.Table
         private val CourseTable = Course.Table
 

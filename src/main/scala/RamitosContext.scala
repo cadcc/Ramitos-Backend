@@ -11,6 +11,7 @@ import cats.mtl.Ask
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.middleware.AuthMiddleware
 import cl.cadcc.ramitos.repository.{CourseRepository, ReviewRepository}
+import mufasa.MufasaApi
 import org.typelevel.log4cats.LoggerFactory
 import org.http4s.client.Client
 import cl.cadcc.ramitos.utils.Crypto
@@ -24,9 +25,10 @@ case class RamitosContext[F[_]](
     httpClient: Client[F],
     crypto: Crypto,
     jwt: JwtTokens[F, Session],
-    courseRepository: CourseRepository,
+    courseRepository: CourseRepository[F],
     reviewRepository: ReviewRepository,
     portalDcc: PortalDcc[F],
+    mufasaClient: MufasaApi[F],
 )
 
 object RamitosContext {
@@ -42,7 +44,7 @@ object RamitosContext {
     given clientFromContext[F[_]](using ctx: RamitosContext[F]): Client[F] = ctx.httpClient
     given jwtTokensFromContext[F[_]](using ctx: RamitosContext[F]): JwtTokens[F, Session] = ctx.jwt
     given cryptoFromContext[F[_]](using ctx: RamitosContext[F]): Crypto = ctx.crypto
-    given courseRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseRepository = ctx.courseRepository
+    given courseRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseRepository[F] = ctx.courseRepository
     given reviewRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): ReviewRepository = ctx.reviewRepository
     given dccPortalFromContext[F[_]](using ctx: RamitosContext[F]): PortalDcc[F] = ctx.portalDcc
     given askSessionFromContext[F[_]](using ctx: RamitosContext[F]): Ask[F, Session] = ctx.auth.askSession

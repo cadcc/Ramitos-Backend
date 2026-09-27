@@ -12,8 +12,16 @@ import scala.util.Success
 import cats.MonadError
 import cl.cadcc.ramitos.repository.SqlOrder
 import cl.cadcc.ramitos.utils.Shapeless.SchemaModelConvert
+import doobie.TableDefinition
+import doobie.util.fragment.Fragment
+import cats.Reducible
+import doobie.Column
+import doobie.SQLDefinition
+import doobie.util.Write
 
 object extensions {
+    import scala.compiletime.ops.int.*
+    
     extension[F[_], E] (local: Ask[F, Option[E]])
         def toGetSome(errorMessage: String)(using MonadThrow[F]) =
             AskOptionGet(errorMessage, local)

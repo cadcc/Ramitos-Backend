@@ -49,4 +49,10 @@ private[model] object implicits
     given statMapPut[A](using Encoder[A]): Put[Map[Stat, A]] = stringMapPut[A].tcontramap { map =>
         map.map { (k, v) => (k.s, v)}
     }
+
+    def jsonGet[A: Decoder]: Get[A] = Get[Json].temap { json =>
+        json.as[A].leftMap(err => err.show)
+    }
+
+    def jsonPut[A: Encoder]: Put[A] = Put[Json].contramap(_.asJson)
 }

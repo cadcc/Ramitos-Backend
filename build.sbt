@@ -76,9 +76,14 @@ lazy val root = project
       "org.scalameta" %% "munit" % "1.0.0" % Test,
     ),
 
-    scalacOptions ++= Seq("-Wvalue-discard", "-Wnonunit-statement", "-feature"),
+    scalacOptions ++= Seq(
+      "-Wvalue-discard",
+      "-Wnonunit-statement",
+      "-feature",
+      "-Wconf:msg=_ is deprecated for wildcard arguments:s",
+    ),
 
-    smithy4sAllowedNamespaces := List("cl.cadcc.ramitos.schema"),
+    smithy4sAllowedNamespaces := List("cl.cadcc.ramitos.schema", "mufasa"),
 //    Compile / smithy4sSmithyBuildConfigs := Seq((ThisBuild / baseDirectory).value / "smithy-build.json"),
     Compile / smithy4sInputDirs := List((ThisBuild / baseDirectory).value / "src" / "main" / "smithy"),
 

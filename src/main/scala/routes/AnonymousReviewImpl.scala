@@ -11,7 +11,7 @@ import doobie.Transactor
 import doobie.syntax.all.*
 import smithy4s.time.Timestamp
 
-class AnonymousReviewImpl[F[_]: {Concurrent as F, Transactor as xa}](using reviewRepository: ReviewRepository, courseRepository: CourseRepository) extends AnonymousReviewService[F] {
+class AnonymousReviewImpl[F[_]: {Concurrent as F, Transactor as xa}](using reviewRepository: ReviewRepository, courseRepository: CourseRepository[F]) extends AnonymousReviewService[F] {
     private def anonymize(m: ModelReview): AnonymousReview =
         AnonymousReview(
             id = m.id,

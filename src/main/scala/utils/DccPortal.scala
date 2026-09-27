@@ -17,9 +17,9 @@ import cl.cadcc.ramitos.JwtTokens
 import cats.data.OptionT
 import cats.effect.Clock
 import cats.data.EitherT
-import cl.cadcc.ramitos.model.UcampusLogin
+import cl.cadcc.ramitos.model.DccLogin
 import cl.cadcc.ramitos.schema.AccountService
-import cl.cadcc.ramitos.repository.UcampusLoginRepository
+import cl.cadcc.ramitos.repository.DccLoginRepository
 import cl.cadcc.ramitos.model.Account
 import doobie.util.transactor.Transactor
 import cl.cadcc.ramitos.JwtJsonException
@@ -27,7 +27,7 @@ import cl.cadcc.ramitos.JwtValidationException
 
 trait PortalDcc[F[_]] {
     def authUri: F[Uri]
-    def validate(queryParams: Map[String, String]): F[Either[ValidationError, (Account, UcampusLogin)]]
+    def validate(queryParams: Map[String, String]): F[Either[ValidationError, (Account, DccLogin)]]
 }
 
 object PortalDcc {
@@ -75,7 +75,7 @@ object PortalDcc {
     ) extends PortalDcc[F] {
         override val authUri: F[Uri] = F.pure(config.baseUrl +? ("app", config.appId))
 
-        override def validate(queryParams: Map[String, String]): F[Either[ValidationError, (Account, UcampusLogin)]] =
+        override def validate(queryParams: Map[String, String]): F[Either[ValidationError, (Account, DccLogin)]] =
             (for {
                 jwt <- EitherT
                     .fromOption(
@@ -86,7 +86,7 @@ object PortalDcc {
                 mufasaId <- EitherT.fromEither(obtainMufasaId(data.identification))
                 // TODO: verify mufasaId?
                 ans <- EitherT(
-                    UcampusLoginRepository.getOrCreateAccount(
+                    DccLoginRepository.getOrCreateAccount(
                         ucampusUsername = mufasaId,
                         mufasaId = mufasaId,
                         name = computeDisplayName(data))

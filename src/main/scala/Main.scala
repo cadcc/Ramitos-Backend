@@ -18,8 +18,10 @@ import doobie.util.log.LogHandler
 import doobie.util.transactor.Transactor
 import io.circe.generic.auto.*
 import io.circe.syntax.*
+import mufasa.MufasaApi
 import org.http4s.*
 import org.http4s.circe.*
+import org.http4s.client.Client
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
@@ -28,6 +30,8 @@ import org.http4s.implicits.*
 import org.postgresql.ds.PGSimpleDataSource
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.slf4j.Slf4jFactory
+import smithy4s.http4s.SimpleRestJsonBuilder
+import cats.effect.std.Supervisor
 
 object Main extends IOApp {
     given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
@@ -50,21 +54,32 @@ object Main extends IOApp {
         config.hikari.minimumIdleMillis.foreach( hikari.setMinimumIdle )
 
         HikariTransactor.fromHikariConfig(hikari, logHandler = LogHandler.jdkLogHandler[IO].some)
-    
+
+    private def mufasaClient(client: Client[IO]): Resource[IO, MufasaApi[IO]] =
+        SimpleRestJsonBuilder
+            .withMaxArity(2048)
+            .apply(MufasaApi)
+            .client(client)
+            .uri(Uri.unsafeFromString("https://"))
+            .resource
+
     private val resources: Resource[IO, RamitosContext[IO]] =
         for {
             configFile <- SystemProperties[IO].get("ramitos.configFile").toResource
             conf <- RamitosConfig.load[IO](configFile).toResource
             xa <- getTransactor(conf.db)
-            given Transactor[IO] = xa
+            client <- EmberClientBuilder.default[IO].build
+            mufasaClient <- mufasaClient(client)
             crypto <- Crypto.ofConf(conf.auth.bcrypt).pure[ResourceIO]
             jwt <- JwtTokens.ofClock[IO, Session](conf.auth.jwt).pure[ResourceIO]
+            given MufasaApi[IO] = mufasaClient
+            given Transactor[IO] = xa
+            given Supervisor[IO] <- Supervisor(using Concurrent[IO])
             portalDcc <- PortalDcc.ofConf[IO](conf.auth.portalDcc).pure[ResourceIO]
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
-            client <- EmberClientBuilder.default[IO].build
-            courseRepository = CourseRepository.ofConf(conf.app.tags)
+            courseRepository <- CourseRepository.of(conf.app.tags).toResource
             reviewRepository = ReviewRepository.ofCourseRepository(courseRepository)
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, portalDcc)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, portalDcc, mufasaClient)
 
     override def run(args: List[String]): IO[ExitCode] =
         (for {

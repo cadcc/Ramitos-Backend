@@ -4,31 +4,31 @@ import cats.*
 import cats.syntax.all.*
 import cats.implicits.given
 import cats.data.{NonEmptyVector, OptionT}
-import cl.cadcc.ramitos.model.{Account, AccountRole, UcampusLogin}
+import cl.cadcc.ramitos.model.{Account, AccountRole, DccLogin}
 import doobie.free.connection.ConnectionIO
 import doobie.syntax.all.*
 import doobie.implicits.given
 
 import scala.language.implicitConversions
 
-object UcampusLoginRepository {
-    val Table = UcampusLogin.Table
+object DccLoginRepository {
+    val Table = DccLogin.Table
 
-    def getUcampusLogin(ucampusUsername: String): ConnectionIO[Option[UcampusLogin]] =
-        sql"SELECT ${Table.columns} FROM $Table WHERE ${Table.ucampus_id === ucampusUsername}"
-            .query[UcampusLogin]
+    def getDccLogin(ucampusUsername: String): ConnectionIO[Option[DccLogin]] =
+        sql"SELECT ${Table.columns} FROM $Table WHERE ${Table.ucampusId === ucampusUsername}"
+            .query[DccLogin]
             .option
 
-    def create(ucampusUsername: String, accountId: Int): ConnectionIO[UcampusLogin] =
+    def create(ucampusUsername: String, accountId: Int): ConnectionIO[DccLogin] =
         Table.insertInto(NonEmptyVector.of(
-            Table.ucampus_id --> ucampusUsername,
-            Table.account_id --> accountId
+            Table.ucampusId --> ucampusUsername,
+            Table.accountId --> accountId
         )).update
             .withUniqueGeneratedKeys("ucampus_id", "account_id", "created_at")
 
-    def getOrCreateAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
+    def getOrCreateAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, DccLogin)] =
         for {
-            ucampusLogin <- getUcampusLogin(ucampusUsername)
+            ucampusLogin <- getDccLogin(ucampusUsername)
             accLogin <- ucampusLogin match {
                 case Some(login) =>
                     OptionT(AccountRepository.getById(login.accountId))
@@ -38,7 +38,7 @@ object UcampusLoginRepository {
             }
         } yield accLogin
 
-    private def createWithAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, UcampusLogin)] =
+    private def createWithAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, DccLogin)] =
         for {
             acc <- AccountRepository.create(name, mufasaId.some, AccountRole.NONE)
             login <- create(ucampusUsername, acc.id)

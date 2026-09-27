@@ -18,7 +18,7 @@ import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.middleware.AuthMiddleware.LoginMethod
 import cl.cadcc.ramitos.JwtTokens
 import cl.cadcc.ramitos.repository.PasswordRepository
-import cl.cadcc.ramitos.repository.UcampusLoginRepository
+import cl.cadcc.ramitos.repository.DccLoginRepository
 import cl.cadcc.ramitos.utils.PortalDcc
 import cats.data.OptionT
 import org.typelevel.log4cats.LoggerFactory
