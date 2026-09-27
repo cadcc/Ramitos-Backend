@@ -51,7 +51,7 @@ object MufasaCacheKeyRepository {
           INSERT INTO mufasa_cache_data VALUES ($_key, $value, $schedule)
           ON CONFLICT (key) DO UPDATE SET
             value = $value,
-            schedule = $schedule"""
+            scheduled = $schedule"""
         .update.run
         .ensure(AssertionError("No rows updated... Something is wrong..."))(_ == 0)
         .void
