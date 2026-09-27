@@ -28,6 +28,7 @@ import cl.cadcc.ramitos.utils.extensions.*
 import cats.data.NonEmptyList
 import cats.effect.std.Supervisor
 import mufasa.Ramo
+import cl.cadcc.ramitos.model.implicits.given
 
 trait CourseRepositoryOps {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
@@ -160,9 +161,9 @@ object CourseRepository {
             } yield ans
 
         private[CourseRepository] def bulkCreate(data: NonEmptyList[(String, String)]): ConnectionIO[Int] =
-            val rows = data.map { (l, r) => fr"($l, $r)" }.reduceLeft { (l, r) => fr"$l, $r" }
+            val rows = data.map { (l, r) => fr"($l, $r, $emptyTagStats)" }.reduceLeft { (l, r) => fr"$l, $r" }
             sql"""
-                INSERT INTO $Table (${Table.code}, ${Table.displayName})
+                INSERT INTO $Table (${Table.code}, ${Table.displayName}, ${Table.tagStats})
                 VALUES $rows
                 ON CONFLICT (code) DO NOTHING"""
                 .update.run

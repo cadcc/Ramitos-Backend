@@ -34,7 +34,7 @@ CREATE TABLE dcc_sso(
 CREATE TABLE courses(
     code VARCHAR(20) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    stats JSONB NOT NULL,
+    stats JSONB NOT NULL DEFAULT '{"rate": null, "count": 0, "sum": 0}',
     tag_stats JSONB NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

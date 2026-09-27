@@ -8,7 +8,7 @@ import doobie.util.{Get, Put}
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax.*
 
-private[model] object implicits
+object implicits
     extends JsonbInstances
     with Instances
     with free.Instances
@@ -50,7 +50,7 @@ private[model] object implicits
         map.map { (k, v) => (k.s, v)}
     }
 
-    def jsonGet[A: Decoder]: Get[A] = Get[Json].temap { json =>
+    private[model] def jsonGet[A: Decoder]: Get[A] = Get[Json].temap { json =>
         json.as[A].leftMap(err => err.show)
     }
 
