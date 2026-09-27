@@ -48,7 +48,7 @@ object MufasaCacheKeyRepository {
 
     override def set(value: T, schedule: Option[Instant]): ConnectionIO[Unit] =
       sql"""
-          INSERT INTO mufasa_cache_data VALUES ($_key, $value, $schedule)
+          INSERT INTO mufasa_cache_data(key, value, scheduled) VALUES ($_key, $value, $schedule)
           ON CONFLICT (key) DO UPDATE SET
             value = $value,
             scheduled = $schedule"""
