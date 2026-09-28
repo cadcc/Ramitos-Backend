@@ -35,6 +35,7 @@ import cats.effect.std.Supervisor
 import cl.cadcc.ramitos.config.MufasaConfig
 import smithy4s.http4s.ClientEndpointMiddleware
 import cl.cadcc.ramitos.middleware.ClientAuth
+import cl.cadcc.ramitos.repository.CourseOfferingRepository
 
 object Main extends IOApp {
     given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
@@ -82,8 +83,9 @@ object Main extends IOApp {
             portalDcc <- PortalDcc.ofConf[IO](conf.auth.portalDcc).pure[ResourceIO]
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
             courseRepository <- CourseRepository.of(conf.app.tags).toResource
+            courseOfferingRepository <- CourseOfferingRepository.ofTemporal[IO].toResource
             reviewRepository = ReviewRepository.ofCourseRepository(courseRepository)
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository, reviewRepository, portalDcc, mufasaClient)
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository,courseOfferingRepository, reviewRepository, portalDcc, mufasaClient)
 
     override def run(args: List[String]): IO[ExitCode] =
         (for {
