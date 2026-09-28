@@ -469,7 +469,7 @@ structure CarreraAlumno {
 
 structure Curso {
     @jsonName("cupo")
-    cupo: Integer
+    cupo: String
     
     @jsonName("departamento")
     departamento: String
