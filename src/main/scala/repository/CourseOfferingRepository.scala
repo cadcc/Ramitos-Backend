@@ -134,6 +134,7 @@ object CourseOfferingRepository {
 
     def streammingUpdate(currentSemester: Semester, oldKey: Option[CacheKey]): Stream[F, Unit] =
       getPeriodRange(currentSemester, oldKey)
+        .evalTap(period => logger.debug(s"Updating CourseOfferings for period $period"))
         .chunkN(4) // MUFASA only allows to ask for 4 semesters at a time
         .flatMap(pullOfferings)
         .chunkN(500)
@@ -142,10 +143,13 @@ object CourseOfferingRepository {
       
     def updateFromMufasa(oldKey: Option[CacheKey]): F[(CacheKey, Option[Instant])] =
       for {
+        _ <- logger.info("Updating CourseOffering cache from MUFASA")
         now <- F.realTimeInstant
         currentSemester <- getCurrentSemester
+        _ <- logger.info(s"Updating CourseOffering cache: Current semester is ${currentSemester}")
         _ <- streammingUpdate(currentSemester, oldKey)
           .compile.drain
+        _ <- logger.info("Done updating CourseOffering cache.")
       } yield (CacheKey(currentSemester, now), None)
   }
 
