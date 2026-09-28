@@ -20,6 +20,7 @@ import cats.data.NonEmptyList
 import doobie.syntax.all.*
 import doobie.util.transactor.Transactor
 import cats.effect.std.Supervisor
+import org.typelevel.log4cats.LoggerFactory
 
 trait CourseOfferingRepositoryOps {
   def list(
@@ -37,7 +38,7 @@ object CourseOfferingRepository {
 
   def apply[F[_]](using ev: CourseOfferingRepository[F]) = ev
 
-  def ofTemporal[F[_]: {Temporal, Transactor, MufasaApi, Supervisor}]: F[CourseOfferingRepository[F]] =
+  def ofTemporal[F[_]: {Temporal, Transactor, MufasaApi, Supervisor, LoggerFactory}]: F[CourseOfferingRepository[F]] =
     val ops = CourseOfferingRepositoryOpsImpl()
     val pollerOps = Poller[F](ops)
     given MufasaCacheKeyRepository[CacheKey] = MufasaCacheKeyRepository.make("CourseOfferingRepository")
@@ -54,7 +55,10 @@ object CourseOfferingRepository {
     Temporal as F,
     MufasaApi as mufasa,
     Transactor as xa,
+    LoggerFactory as logging,
   }](ops: CourseOfferingRepositoryOpsImpl) {
+    private val logger = logging.getLogger
+    
     opaque type CourseCode = String
     opaque type OfferingData = (Semester, CourseCode, Short)
     opaque type PeriodoId = String
@@ -119,7 +123,10 @@ object CourseOfferingRepository {
         }
 
     def pullOfferings(periods: Chunk[PeriodoId]): Stream[F, OfferingData] =
-      processCursos(Stream.evalSeq(mufasa.listCursos(periods.toVector.some).map(_.content)))
+      processCursos(
+        Stream.evalSeq(mufasa.listCursos(periods.toVector.some)
+          .map(_.content)
+          .flatTap(vec => logger.debug(s"Pulled CourseOfferings from MUFASA for semesters ${periods} and got ${vec.length} entries"))))
 
     def persistData(data: Chunk[OfferingData]): F[Unit] =
       ops.bulkCreate(NonEmptyList.fromListUnsafe(data.toList))
@@ -130,6 +137,7 @@ object CourseOfferingRepository {
         .chunkN(4) // MUFASA only allows to ask for 4 semesters at a time
         .flatMap(pullOfferings)
         .chunkN(500)
+        .evalTap(_ => logger.debug("Persisting CourseOfferings..."))
         .evalMap(persistData)
       
     def updateFromMufasa(oldKey: Option[CacheKey]): F[(CacheKey, Option[Instant])] =
