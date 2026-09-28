@@ -283,8 +283,9 @@ structure Carrera {
     @jsonName("id_licenciatura_asociada")
     idLicenciaturaAsociada: Integer
     
-    @jsonName("extras")
-    extras: StringMap
+    // Disabled, not sure about the schema of this thing
+    // @jsonName("extras")
+    // extras: StringMap
     
     @jsonName("id_estado")
     vigente: IntBool
@@ -486,8 +487,8 @@ structure Curso {
     @jsonName("codigo")
     codigo: String
     
-    @jsonName("extras")
-    extras: StringMap
+    //@jsonName("extras")
+    //extras: StringMap
     
     @jsonName("comentario")
     comentario: String
