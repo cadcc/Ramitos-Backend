@@ -109,9 +109,11 @@ object CourseOfferingRepository {
           })
         .evalTap {curso => logger.trace(s"Processing Mufasa Offering $curso")}
         .collect {
+          case c@Curso(idInstitucion = Some("5")) => c.asRight
+          case Curso(idInstitucion = Some(id)) => AssertionError(s"id_institution is $id, not 5 (DCC)").asLeft
           case c@Curso(codigo = Some(v)) if v.startsWith("CC") => c.asRight
           case Curso(codigo = Some(v)) => AssertionError(s"Code '$v' does not start with 'CC'").asLeft
-          case _ => AssertionError(s"Offering does not have a code.").asLeft
+          case _ => AssertionError(s"Offering does not have a code not id_institucion.").asLeft
         }
         .evalMapFilter {
           case Right(v) => v.some.pure
