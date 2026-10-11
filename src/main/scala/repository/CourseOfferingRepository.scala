@@ -174,19 +174,19 @@ object CourseOfferingRepository {
 
     private[CourseOfferingRepository] def bulkCreate(data: NonEmptyList[(Semester, String, Short)]): ConnectionIO[Int] =
       import scala.language.implicitConversions
-      val rows = data.map { (s, c, i) => fr"($c, $s.year, $s.semester, $i)" }.reduceLeft { (l, r) => fr"$l, $r" }
+      val rows = data.map { (s, c, i) => fr"($c, ${s.year}, ${s.semesterType}, $i)" }.reduceLeft { (l, r) => fr"$l, $r" }
       sql"""
       WITH insert_data (code, year, semester, section) AS (
         VALUES $rows
       )
-      INSERT INTO $Table (${Table.courseCode}, ${Table.year}, ${Table.semester}, ${Table.section})
+      INSERT INTO $Table (${Table.courseCode}, ${Table.year}, ${Table.semesterType}, ${Table.section})
       SELECT data.code, data.year, data.semester, data.section
       FROM insert_data as data
       WHERE EXISTS (
         SELECT 1 FROM courses WHERE data.code = courses.code
       )
       ON CONFLICT (${Table.courseCode}, ${Table.year}, ${Table.semester}, ${Table.section}) DO NOTHING
-      """"
+      """
         .update.run
   }
 }
