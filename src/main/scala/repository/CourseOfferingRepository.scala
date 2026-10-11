@@ -100,34 +100,44 @@ object CourseOfferingRepository {
       val startSemester = oldKey.map(_.semester).getOrElse(currentSemester.minusYears(yearRange))
       Semester.between(startSemester, currentSemester).map(semesterToPeriodoId)
 
-    def processCursos(cursos: Stream[F, Curso]): Stream[F, OfferingData] =
-      cursos
+    def pullOfferings(periods: Chunk[PeriodoId]): Stream[F, OfferingData] =
+      Stream.evalSeq(
+          mufasa.listCursos(periods.toVector.some)
+          .map(_.content)
+          .flatTap { vec =>
+            logger.debug(s"Pulled CourseOfferings from MUFASA for semesters ${periods} and got ${vec.length} entries")
+          })
+        .evalTap {curso => logger.trace(s"Processing Mufasa Offering $curso")}
         .collect {
-          case c@Curso(codigo = Some(v)) if v.startsWith("CC") => c
-        }
-        .map { curso =>
-          for {
-            periodoId <- curso.periodo.toRight(AssertionError("Missing periodo for this offering"))
-            courseCode <- curso.codigo.toRight(AssertionError("Missing codigo for this offering"))
-            section <- curso.seccion.flatMap(_.toShortOption).toRight(AssertionError("Missing secction for this offering"))
-          } yield (periodoId, courseCode, section)
+          case c@Curso(codigo = Some(v)) if v.startsWith("CC") => c.asRight
+          case Curso(codigo = Some(v)) => AssertionError(s"Code '$v' does not start with 'CC'").asLeft
+          case _ => AssertionError(s"Offering does not have a code.").asLeft
         }
         .evalMapFilter {
           case Right(v) => v.some.pure
-          case Left(err) => logger.debug(err)(s"Could not extract data from course.") *> None.pure
+          case Left(err) => logger.debug(err)("Skipped course.") *> None.pure
         }
-        .evalMapFilter { par =>
-          periodoIdToSemester(par._1).attempt.flatMap {
-            case Right(v) => (v, par._2, par._3).some.pure
-            case Left(err) => logger.debug(err)(s"Could not parse periodId '${par._1}'") *> None.pure
-          }
+        .map { curso =>
+          for {
+            year <- curso.anno
+              .flatMap(_.toShortOption)
+              .toRight(AssertionError("Missing year for this offering"))
+            period <- curso.periodo
+              .flatMap(_.toIntOption)
+              .flatMap(SemesterType.ofIndex)
+              .toRight(AssertionError("Missing periodo for this offering"))
+            courseCode <- curso.codigo
+              .toRight(AssertionError("Missing codigo for this offering"))
+            section <- curso.seccion
+              .flatMap(_.toShortOption)
+              .toRight(AssertionError("Missing secction for this offering"))
+          } yield (year, period, courseCode, section)
         }
-
-    def pullOfferings(periods: Chunk[PeriodoId]): Stream[F, OfferingData] =
-      processCursos(
-        Stream.evalSeq(mufasa.listCursos(periods.toVector.some)
-          .map(_.content)
-          .flatTap(vec => logger.debug(s"Pulled CourseOfferings from MUFASA for semesters ${periods} and got ${vec.length} entries"))))
+        .evalMapFilter {
+          case Right(v) => v.some.pure
+          case Left(err) => logger.trace(err)(s"Could not extract data from course.") *> None.pure
+        }
+        .map { par => (Semester(par._1, par._2), par._3, par._4) }
 
     def persistData(data: Chunk[OfferingData]): F[Unit] =
       ops.bulkCreate(NonEmptyList.fromListUnsafe(data.toList))
