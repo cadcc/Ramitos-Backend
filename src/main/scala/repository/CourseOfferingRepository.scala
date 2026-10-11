@@ -112,13 +112,14 @@ object CourseOfferingRepository {
             section <- curso.seccion.flatMap(_.toShortOption).toRight(AssertionError("Missing secction for this offering"))
           } yield (periodoId, courseCode, section)
         }
-        .collect {
-          case Right(v) => v
+        .evalMapFilter {
+          case Right(v) => v.some.pure
+          case Left(err) => logger.debug(err)(s"Could not extract data from course.") *> None.pure
         }
         .evalMapFilter { par =>
-          periodoIdToSemester(par._1).attempt.map {
-            case Right(v) => (v, par._2, par._3).some
-            case Left(err) => None
+          periodoIdToSemester(par._1).attempt.flatMap {
+            case Right(v) => (v, par._2, par._3).some.pure
+            case Left(err) => logger.debug(err)(s"Could not parse periodId '${par._1}'") *> None.pure
           }
         }
 
