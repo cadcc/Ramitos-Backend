@@ -34,7 +34,7 @@ class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRe
         Course(
             id = course.code,
             name = course.name,
-            reviewCount = ???,
+            reviewCount = 0,
             stats = CourseStats(
                 docencia = statToSchema(course.stats(Stat.DOCENCIA)),
                 vibes = statToSchema(course.stats(Stat.VIBES)),
