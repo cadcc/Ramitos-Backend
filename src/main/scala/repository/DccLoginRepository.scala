@@ -19,10 +19,11 @@ object DccLoginRepository {
             .query[DccLogin]
             .option
 
-    def create(ucampusUsername: String, accountId: Int): ConnectionIO[DccLogin] =
+    def create(ucampusUsername: String, mufasaId: String, accountId: Int): ConnectionIO[DccLogin] =
         Table.insertInto(NonEmptyVector.of(
             Table.ucampusId --> ucampusUsername,
-            Table.accountId --> accountId
+            Table.mufasaId --> ucampusUsername,
+            Table.accountId --> accountId,
         )).update
             .withUniqueGeneratedKeys(Table.columnNames*)
 
@@ -41,6 +42,6 @@ object DccLoginRepository {
     private def createWithAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, DccLogin)] =
         for {
             acc <- AccountRepository.create(name, mufasaId.some, AccountRole.NONE)
-            login <- create(ucampusUsername, acc.id)
+            login <- create(ucampusUsername, mufasaId, acc.id)
         } yield (acc, login)
 }
