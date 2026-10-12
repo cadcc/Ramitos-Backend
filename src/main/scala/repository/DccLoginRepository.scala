@@ -24,7 +24,7 @@ object DccLoginRepository {
             Table.ucampusId --> ucampusUsername,
             Table.accountId --> accountId
         )).update
-            .withUniqueGeneratedKeys("ucampus_id", "account_id", "created_at")
+            .withUniqueGeneratedKeys(Table.columnNames*)
 
     def getOrCreateAccount(ucampusUsername: String, mufasaId: String, name: String): ConnectionIO[(Account, DccLogin)] =
         for {
