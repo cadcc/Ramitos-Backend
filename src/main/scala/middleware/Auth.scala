@@ -42,6 +42,7 @@ import io.circe.Json
 import org.http4s.dsl.impl.Responses.UnauthorizedOps
 import cl.cadcc.ramitos.JwtValidationException
 import cats.effect.MonadCancelThrow
+import smithy.api.OptionalAuth
 
 trait AuthMiddleware[F[_], E] {
     val askSession: Ask[F, E]
@@ -79,30 +80,34 @@ object AuthMiddleware {
                 case Some(value) =>
                     endpointHints.get[Auth] match {
                         case Some(value) if value.value.isEmpty => identity
-                        case _ => httpTransform 
+                        case _ => httpTransform(endpointHints.get[OptionalAuth].isDefined)
                     }
                 case None => identity
             }
         
-        private def httpTransform(app: HttpApp[F]): HttpApp[F] = Kleisli {(req: Request[F]) =>
+        private def httpTransform(optional: Boolean)(app: HttpApp[F]): HttpApp[F] = Kleisli {(req: Request[F]) =>
             for {
-                token <-
+                tokenOpt <-
                     req.headers
                         .get[Authorization]
                         .collect {
-                            case Authorization(Credentials.Token(AuthScheme.Bearer, token)) => Success(token)
+                            case Authorization(Credentials.Token(AuthScheme.Bearer, token)) =>
+                                Success(token.some)
                             case Authorization(_) =>
                                 Failure(new NotAuthenticated(
                                     reason = "Invalid Authentication scheme.".some,
                                     message = "Retry using Bearer scheme.".some
                                 ))
                         }
-                        .getOrElse(Failure(new NotAuthenticated(
-                            reason = "Missing Authentication header.".some,
-                            message = "Retry including a valid Bearer token.".some
+                        .getOrElse(
+                            if optional then Success(None)
+                            else
+                                Failure(new NotAuthenticated(
+                                    reason = "Missing Authentication header.".some,
+                                    message = "Retry including a valid Bearer token.".some
                         )))
                         .getM
-                session <-
+                session <- tokenOpt.traverse { token =>
                     EitherT(JwtTokens[F, T].verifyAccessToken(token))
                         .leftMap {
                             case JwtJsonException(reason, cause) => new NotAuthenticated(
@@ -114,7 +119,8 @@ object AuthMiddleware {
                                 message = reason.some
                             )
                         }.rethrowT
-                response <- localSession.scope(app(req))(session.some)
+                }
+                response <- localSession.scope(app(req))(session)
             } yield response
         }
     }
