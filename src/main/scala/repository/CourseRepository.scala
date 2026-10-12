@@ -111,11 +111,23 @@ object CourseRepository {
         private val Table = Course.Table
         private val tagsList: List[String] = tagSettings.allTags.toList
 
+        private val emptyStat = CourseStat(Float.NaN, 0, 0L)
+        
         private val emptyTagStats =
             tagsList
             .map { tagName =>
-                tagName -> CourseStat(Float.NaN, 0, 0L) }
+                tagName -> emptyStat }
             .toMap
+
+        private val emptyStats: Map[Stat, CourseStat] =
+            Map(
+                Stat.DOCENCIA -> emptyStat,
+                Stat.VIBES -> emptyStat,
+                Stat.RELEVANCIA -> emptyStat,
+                Stat.CARGA -> emptyStat,
+                Stat.CARGA -> emptyStat,
+                Stat.DIFICULTAD -> emptyStat,
+            )
 
         def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]] =
             val sql =
@@ -141,6 +153,7 @@ object CourseRepository {
             Table.insertInto(NonEmptyVector.of(
                     Table.code --> code,
                     Table.displayName --> name,
+                    Table.stats --> emptyStats,
                     Table.tagStats --> emptyTagStats ))
                 .update
                 .withUniqueGeneratedKeys(Table.columnNames*)
@@ -161,9 +174,9 @@ object CourseRepository {
             } yield ans
 
         private[CourseRepository] def bulkCreate(data: NonEmptyList[(String, String)]): ConnectionIO[Int] =
-            val rows = data.map { (l, r) => fr"($l, $r, $emptyTagStats)" }.reduceLeft { (l, r) => fr"$l, $r" }
+            val rows = data.map { (l, r) => fr"($l, $r, $emptyStats, $emptyTagStats)" }.reduceLeft { (l, r) => fr"$l, $r" }
             sql"""
-                INSERT INTO $Table (${Table.code}, ${Table.displayName}, ${Table.tagStats})
+                INSERT INTO $Table (${Table.code}, ${Table.displayName}, ${Table.stats}, ${Table.tagStats})
                 VALUES $rows
                 ON CONFLICT (code) DO NOTHING"""
                 .update.run
