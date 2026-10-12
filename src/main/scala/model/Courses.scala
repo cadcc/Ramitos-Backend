@@ -34,15 +34,12 @@ object Stat {
         case _ => None
 }
 
-case class CourseStat(rate: Float, count: Int, sum: Long) derives Show
+case class CourseStat(rate: Option[Float], count: Int, sum: Long) derives Show
 
 object CourseStat {
     given courseStatEncoder: Encoder[CourseStat] = Encoder.instance { cs =>
-        val rate: Option[Float] =
-            if cs.rate.isNaN then None
-            else cs.rate.some
         Json.obj(
-            "rate" -> Json.fromFloatOrNull(rate),
+            "rate" -> Json.fromFloatOrNull(cs.rate),
             "count" -> Json.fromInt(cs.count),
             "sum" -> Json.fromLong(cs.sum),
         )
@@ -50,11 +47,7 @@ object CourseStat {
 
     given courseStatDecoder: Decoder[CourseStat] = Decoder.instance { cursor =>
         for {
-            rateOpt <- cursor.get[Option[Float]]("rate")
-            rate = rateOpt match {
-                case None => Float.NaN
-                case Some(v) => v
-            }
+            rate <- cursor.get[Option[Float]]("rate")
             count <- cursor.get[Int]("count")
             sum <- cursor.get[Long]("sum")
         } yield CourseStat(rate, count, sum)
@@ -75,16 +68,16 @@ case class Course(
                 case Some(rating) =>
                     val newSum = v.sum + rating
                     val newCount = v.count + 1
-                    (k, CourseStat(newSum / newCount, newCount, newSum))
+                    (k, CourseStat((newSum.toFloat / newCount).some, newCount, newSum))
                 case None => (k, v)
         }
         val newTags = this.tagStats.map { (k, v) =>
             val newCount = v.count + (if tags.isEmpty then 0 else 1)
             if tags.contains(k) then
                 val newSum = v.sum + 1
-                (k, CourseStat(newSum / newCount, newCount, newSum))
+                (k, CourseStat((newSum.toFloat / newCount).some, newCount, newSum))
             else
-                (k, (CourseStat(v.sum / newCount, newCount, v.sum)))
+                (k, (CourseStat((v.sum.toFloat / newCount).some, newCount, v.sum)))
         }
         this.copy(stats = newStats, tagStats = newTags)
 }

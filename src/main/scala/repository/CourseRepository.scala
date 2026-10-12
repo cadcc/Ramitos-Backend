@@ -111,7 +111,7 @@ object CourseRepository {
         private val Table = Course.Table
         private val tagsList: List[String] = tagSettings.allTags.toList
 
-        private val emptyStat = CourseStat(Float.NaN, 0, 0L)
+        private val emptyStat = CourseStat(None, 0, 0L)
         
         private val emptyTagStats =
             tagsList

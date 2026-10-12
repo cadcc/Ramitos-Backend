@@ -19,8 +19,7 @@ import smithy4s.time.Timestamp
 class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRepository: CourseRepository[F]) extends CourseService[F] {
 
     private def statToSchema(stat: ModelCourseStat): Option[CourseStat] =
-        if stat.rate.isNaN then None
-        else CourseStat(stat.rate).some
+        stat.rate.map(CourseStat.apply)
 
     /** HTTP GET /api/courses */
     override def listCourses(limit: Long, codes: Option[List[String]], enrolled: Option[Boolean], reviewable: Option[Boolean], after: Option[String]): F[ListCoursesOutput] =
@@ -42,7 +41,7 @@ class CourseImpl[F[_] : MonadCancelThrow as F](using xa: Transactor[F], courseRe
                 carga = statToSchema(course.stats(Stat.CARGA)),
                 dificultad = statToSchema(course.stats(Stat.DIFICULTAD)),
             ),
-            tag_stats = course.tagStats.map { (k, v) => (k, CourseStat(v.rate)) },
+            tag_stats = course.tagStats.mapFilter(_.rate.map(CourseStat.apply)),
             enrolled = None,
             reviewable = None,
         )
