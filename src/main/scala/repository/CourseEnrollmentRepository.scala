@@ -90,7 +90,7 @@ object CourseEnrollmentRepository {
         cache <- getCacheOrCreate(now, mufasaId, semesterFloor).transact(xa)
         watermark <- getWatermark
         _ <-
-          if cache.lastUpdate.isBefore(now.plus(6, ChronoUnit.WEEKS)) then
+          if cache.lastUpdate.isBefore(now.plus(6, ChronoUnit.DAYS)) then
             update(mufasaId, cache.semesterSynced, semesterCeil, watermark)
           else F.unit
       } yield ()
