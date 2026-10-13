@@ -43,7 +43,7 @@ case class CourseEnrollmentCache(
 ) derives Codec, Read, Write
 
 object CourseEnrollmentCache {
-    object Table extends TableDefinition("course_offerings_cache") {
+    object Table extends TableDefinition("course_enrollment_cache") {
         lazy val columns = Composite(all)
         lazy val columnNames = all.columns.map(_.rawName).toVector
 
