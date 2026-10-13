@@ -40,13 +40,13 @@ trait CourseEnrollmentRepository[F[_]] {
   def invalidate(mufasaId: String): F[Unit]
   
   /// This may contain uncommitted enrollments, joins may not work.
-  def getEnrollments(mufasaId: String): ConnectionIO[Vector[CourseOffering]]
+  def getEnrollments(mufasaId: String, firstBySemester: Boolean = false, orderAscending: Boolean = true): ConnectionIO[Vector[CourseOffering]]
 
   /// Get enrollments that will no longer change
-  def getLiveEnrollments(mufasaId: String): ConnectionIO[Vector[TransientCourseOffering]]
+  def getLiveEnrollments(mufasaId: String, firstBySemester: Boolean = false, orderAscending: Boolean = true): ConnectionIO[Vector[TransientCourseOffering]]
 
   /// get enrollments that may change
-  def getSealedEnrollments(mufasaId: String): ConnectionIO[Vector[DBCourseOffering]]
+  def getSealedEnrollments(mufasaId: String, firstBySemester: Boolean = false, orderAscending: Boolean = true): ConnectionIO[Vector[DBCourseOffering]]
 
   def getEnrollmentsFor(mufasaId: String, courseCode: String): ConnectionIO[Vector[CourseOffering]]
 
@@ -113,26 +113,46 @@ object CourseEnrollmentRepository {
           .map { _.filter(_.courseCode == courseCode) }
       } yield (seal ++ live)
 
-    override def getEnrollments(mufasaId: String): ConnectionIO[Vector[CourseOffering]] =
+    override def getEnrollments(mufasaId: String, firstBySemester: Boolean = false, orderAscending: Boolean = true): ConnectionIO[Vector[CourseOffering]] =
       for {
-        live <- getLiveEnrollments(mufasaId)
-        seal <- getSealedEnrollments(mufasaId)
-      } yield (live ++ seal)
+        seal <- getSealedEnrollments(mufasaId, firstBySemester, orderAscending)
+        live <- getLiveEnrollments(mufasaId, firstBySemester, orderAscending)
+        ans1 = if orderAscending then seal ++ live else live ++ seal
+        ans2 = if firstBySemester then ans1.distinctBy(_.courseCode) else ans1
+      } yield ans2
 
-    override def getLiveEnrollments(mufasaId: String): ConnectionIO[Vector[TransientCourseOffering]] =
+    override def getLiveEnrollments(mufasaId: String, firstBySemester: Boolean = false, orderAscending: Boolean = true): ConnectionIO[Vector[TransientCourseOffering]] =
       val sql = sql"""
         SELECT ${CacheTable.transientData} FROM $CacheTable
         WHERE ${CacheTable.mufasaId === mufasaId}  
       """
       sql.query[Vector[TransientCourseOffering]]
         .unique
+        .map { vec =>
+          if orderAscending then vec.sortWith( _.semester < _.semester )
+          else vec.sortWith( _.semester > _.semester ) }
+        .map { vec =>
+          if firstBySemester then vec.distinctBy(_.courseCode)
+          else vec
+        }
     
-    override def getSealedEnrollments(mufasaId: String): ConnectionIO[Vector[DBCourseOffering]] =
+    override def getSealedEnrollments(mufasaId: String, firstBySemester: Boolean = false, orderAscending: Boolean = true): ConnectionIO[Vector[DBCourseOffering]] =
+      val orderCols =
+        if firstBySemester then fr"${OfferingTable.courseCode}, ${OfferingTable.semester}"
+        else fr"${OfferingTable.semester}"
+      val order = if orderAscending then fr"ASC" else fr"DESC"
+      val cols =
+        if firstBySemester then
+          fr"DISTINCT ON ({$OfferingTable.courseCode}) ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
+        else fr"{$OfferingTable.courseCode}, ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
       val sql = sql"""
-        SELECT ${OfferingTable.all}
+        SELECT $cols
         FROM $Table JOIN $OfferingTable ON ${Table.courseOfferingId === OfferingTable.id}
+        ORDER BY $orderCols $order
       """
-      sql.query[DBCourseOffering]
+      sql.query[(String, Int, Int, Semester, Short)]
+        .map { (code, id, mufasaId, semester, section) => (id, code, mufasaId, semester, section) }
+        .map(DBCourseOffering.apply)
         .to[Vector]
 
     override def getWatermark: F[Semester] =

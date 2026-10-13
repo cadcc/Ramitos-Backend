@@ -46,6 +46,7 @@ import smithy.api.OptionalAuth
 
 trait AuthMiddleware[F[_], E] {
     val askSession: Ask[F, E]
+    val optSession: Ask[F, Option[E]]
 
     val middleware: ServerEndpointMiddleware[F]
 }
@@ -60,7 +61,7 @@ object AuthMiddleware {
 
     type T = Session
 
-    type AskSession = Ask[IO, T]
+    type AskSession[F[_]] = Ask[F, T]
 
     def ofJwtTokens(using JwtTokens[IO, T]): IO[AuthMiddleware[IO, T]] =
         for {
@@ -69,6 +70,7 @@ object AuthMiddleware {
 
     private class AuthMiddlewareImpl[F[_]](using MonadThrow[F], Clock[F], JwtTokens[F, T])(private val localSession: Local[F, Option[T]]) extends AuthMiddleware[F, T] {
         val askSession: Ask[F, T] = localSession.toGetSome("Asked for a session outside of the context of an authenticated endpoint.")
+        val optSession: Ask[F, Option[T]] = localSession
 
         val middleware = AuthServerEndpointMiddlewareImpl(localSession)
     }

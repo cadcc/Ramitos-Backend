@@ -57,4 +57,5 @@ object RamitosContext {
     given courseEnrollmentRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseEnrollmentRepository[F] = ctx.courseEnrollmentRepository
     given dccPortalFromContext[F[_]](using ctx: RamitosContext[F]): PortalDcc[F] = ctx.portalDcc
     given askSessionFromContext[F[_]](using ctx: RamitosContext[F]): Ask[F, Session] = ctx.auth.askSession
+    given optSessionFromContext[F[_]](using ctx: RamitosContext[F]): Ask[F, Option[Session]] = ctx.auth.optSession
 }
