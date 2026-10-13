@@ -82,7 +82,7 @@ object Main extends IOApp {
             given MufasaApi[IO] = mufasaClient
             given Transactor[IO] = xa
             given Supervisor[IO] <- Supervisor(using Concurrent[IO])
-            portalDcc <- PortalDcc.ofConf[IO](conf.auth.portalDcc).pure[ResourceIO]
+            portalDcc <- PortalDcc.ofConf[IO](conf.auth.portalDcc).toResource
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
             semesterRepository <- SemesterRepository.of[IO].pure[ResourceIO]
             given SemesterRepository[IO] = semesterRepository

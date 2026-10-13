@@ -57,6 +57,7 @@ import cats.effect.Sync
 import cats.effect.Concurrent
 import cats.effect.Async
 import cl.cadcc.ramitos.repository.CourseEnrollmentRepository
+import cats.effect.std.SecureRandom
 
 object Authentication {
     sealed abstract class DccLoginState {
@@ -81,7 +82,7 @@ object Authentication {
         PortalDcc,
         LoggerFactory,
         UUIDGen,
-        Random,
+        SecureRandom,
         CourseEnrollmentRepository
     }](using
         JwtTokens[F, Session],
@@ -99,7 +100,7 @@ object Authentication {
         PortalDcc as portal,
         LoggerFactory as logging,
         UUIDGen as uuidGen,
-        Random as rand,
+        SecureRandom as rand,
         CourseEnrollmentRepository as enrollRepository,
     }](sto: MapRef[F, String, Option[DccLoginState]])(
         using jwt: JwtTokens[F, Session],
