@@ -53,7 +53,9 @@ class CourseImpl[
                 case Some(l) => l.toSet
                 case None => Set.empty
             }
-            listCodes = if enrolled then enrolledCodes.intersect(reqCodes).toSeq else Seq.empty
+            listCodes =
+                if enrolled then enrolledCodes.intersect(reqCodes).toSeq
+                else codes.getOrElse(List.empty).toSeq
             courses <- courseRepository
                 .list(limit, listCodes, after)
                 .map(course => modelToSchema(enrolledCodes.contains(course.code).some)(course))
@@ -83,7 +85,7 @@ class CourseImpl[
             ),
             tag_stats = course.tagStats.mapFilter(_.rate.map(CourseStat.apply)),
             enrolled = enrolled,
-            reviewable = None,
+            reviewable = enrolled,
         )
 
     def getCourse(courseId: String): F[Course] =
