@@ -50,7 +50,7 @@ object implicits
         map.map { (k, v) => (k.s, v)}
     }
 
-    private[model] def jsonGet[A: Decoder]: Get[A] = Get[Json].temap { json =>
+    def jsonGet[A: Decoder]: Get[A] = Get[Json].temap { json =>
         json.as[A].leftMap(err => err.show)
     }
 

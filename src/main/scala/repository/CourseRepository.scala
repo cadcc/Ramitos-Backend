@@ -29,6 +29,8 @@ import cats.data.NonEmptyList
 import cats.effect.std.Supervisor
 import mufasa.Ramo
 import cl.cadcc.ramitos.model.implicits.given
+import cats.data.OptionT
+import org.typelevel.log4cats.LoggerFactory
 
 trait CourseRepositoryOps {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
@@ -47,11 +49,14 @@ object CourseRepository {
 
     def apply[F[_]](using ev: CourseRepository[F]): CourseRepository[F] = ev
 
-    def of[F[_]: {Transactor as xa, Temporal, Supervisor, MufasaApi}](tagSettings: TagSettings): F[CourseRepository[F]] =
+    def of[F[_]: {Transactor as xa, Temporal, Supervisor, MufasaApi, LoggerFactory as logging}](tagSettings: TagSettings): F[CourseRepository[F]] =
+        val logger = logging.getLogger
         val ops = CourseRepositoryOpsImpl(tagSettings)
         val cache = MufasaCache(ops)
         given MufasaCacheKeyRepository[CourseCacheKey] = MufasaCacheKeyRepository.make("CourseRepository")
         for {
+            upgradedCourses <- ops.upgradeTags.transact(xa)
+            _ <- logger.info(s"Upgraded $upgradedCourses to the new tags")
             poller <- MufasaPoller.selfScheduling(cache.updateFromMufasa)
             allCourses <- ops.listAll
                 .transact(xa)
@@ -196,11 +201,20 @@ object CourseRepository {
             sql"""
                 INSERT INTO $Table (${Table.code}, ${Table.mufasaCourseId}, ${Table.displayName}, ${Table.stats}, ${Table.tagStats})
                 VALUES $rows
-                ON CONFLICT (code) DO NOTHING"""
+                ON CONFLICT (code) DO NOTHING
+            """
                 .update.run
 
         private[CourseRepository] def listAll: Stream[ConnectionIO, Course] =
             sql"SELECT ${Table.all} FROM $Table"
                 .query[Course].stream
+
+        private[CourseRepository] def upgradeTags: ConnectionIO[Int] =
+            sql"""
+                UPDATE $Table SET
+                ${Table.tagStats} = $emptyTagStats || ${Table.tagStats}
+            """
+                .update
+                .run
     }
 }
