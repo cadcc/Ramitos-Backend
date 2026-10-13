@@ -442,7 +442,7 @@ structure Semana {
 
 structure CursoInscrito {
     @jsonName("rut")
-    rut: String
+    rut: Integer
     
     @jsonName("id_periodo")
     idPeriodo: String
