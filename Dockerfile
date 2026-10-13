@@ -26,4 +26,4 @@ ENV HTTP_HOST=localhost
 
 EXPOSE 80
 
-CMD ["java", "-cp", "/opt/classpath/*", "-Dramitos.config=/opt/pandita.conf", "-jar", "ramitos.jar"]
+CMD ["java", "-cp", "/opt/classpath/*", "-Dramitos.config=/opt/ramitos.conf", "-jar", "ramitos.jar"]
