@@ -42,7 +42,7 @@ object DBCourseOffering {
         
         val id: Column[Int] = Column("id")
         val courseCode: Column[String] = Column("course_code")
-        val mufasaOfferingId: Column[Int] = Column("mufasa_course_id")
+        val mufasaOfferingId: Column[Int] = Column("mufasa_offering_id")
         val year: Column[Short] = Column("year")
         val semesterType: Column[SemesterType] = Column("semester")
         val section: Column[Short] = Column("section")
