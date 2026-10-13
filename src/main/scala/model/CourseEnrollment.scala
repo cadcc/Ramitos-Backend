@@ -51,7 +51,7 @@ object CourseEnrollmentCache {
         val transientData: Column[Vector[TransientCourseOffering]] = Column("transient_data")
         val semesterSyncedYear: Column[Short] = Column("semester_synced_year")
         val semesterSyncedType: Column[SemesterType] = Column("semester_synced_type")
-        val lastPull: Column[Instant] = Column("last_pull")
+        val lastPull: Column[Instant] = Column("last_update")
 
         val semesterSynced: SQLDefinition[Semester] = Composite((
           semesterSyncedYear.sqlDef,
