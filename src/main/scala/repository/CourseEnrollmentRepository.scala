@@ -143,8 +143,8 @@ object CourseEnrollmentRepository {
       val order = if orderAscending then fr"ASC" else fr"DESC"
       val cols =
         if firstBySemester then
-          fr"DISTINCT ON ({$OfferingTable.courseCode}) ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
-        else fr"{$OfferingTable.courseCode}, ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
+          fr"DISTINCT ON (${OfferingTable.courseCode}) ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
+        else fr"${OfferingTable.courseCode}, ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
       val sql = sql"""
         SELECT $cols
         FROM $Table JOIN $OfferingTable ON ${Table.courseOfferingId === OfferingTable.id}
