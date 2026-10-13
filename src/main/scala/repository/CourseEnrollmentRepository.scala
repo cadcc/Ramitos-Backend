@@ -144,18 +144,14 @@ object CourseEnrollmentRepository {
       val order = if orderAscending then fr"ASC" else fr"DESC"
       val cols =
         if firstBySemester then
-          fr"DISTINCT ON (${OfferingTable.courseCode}) ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
-        else fr"${OfferingTable.courseCode}, ${OfferingTable.id}, ${OfferingTable.mufasaOfferingId}, ${OfferingTable.semester}, ${OfferingTable.section}"
+          fr"DISTINCT ON (${OfferingTable.courseCode}) ${OfferingTable.all}"
+        else fr"${OfferingTable.all}"
       val sql = sql"""
         SELECT $cols
         FROM $Table JOIN $OfferingTable ON ${Table.courseOfferingId === OfferingTable.id}
         ORDER BY $orderCols $order
       """
-      sql.query[(String, Int, Int, Short, SemesterType, Short)]
-        .map { (code, id, mufasaId, year, semester, section) =>
-          (id, code, mufasaId, Semester(year, semester), section)
-        }
-        .map(DBCourseOffering.apply)
+      sql.query[DBCourseOffering]
         .to[Vector]
 
     override def getWatermark: F[Semester] =
