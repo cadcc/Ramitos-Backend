@@ -33,6 +33,7 @@ CREATE TABLE dcc_sso(
 
 CREATE TABLE courses(
     code VARCHAR(20) PRIMARY KEY,
+    mufasa_course_id INTEGER NOT NULL,
     name VARCHAR(100) NOT NULL,
     stats JSONB NOT NULL,
     tag_stats JSONB NOT NULL,
@@ -43,6 +44,7 @@ CREATE TABLE courses(
 CREATE TABLE course_offerings(
     id SERIAL PRIMARY KEY,
     course_code VARCHAR(20) NOT NULL REFERENCES courses(code),
+    mufasa_offering_id INTEGER NOT NULL,
     year SMALLINT NOT NULL,
     semester semester NOT NULL,
     section SMALLINT NOT NULL,

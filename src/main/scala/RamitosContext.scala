@@ -16,7 +16,9 @@ import org.typelevel.log4cats.LoggerFactory
 import org.http4s.client.Client
 import cl.cadcc.ramitos.utils.Crypto
 import cl.cadcc.ramitos.utils.PortalDcc
-import cl.cadcc.ramitos.repository.CourseOfferingRepository
+import cl.cadcc.ramitos.repository.DBCourseOfferingRepository
+import cl.cadcc.ramitos.repository.SemesterRepository
+import cl.cadcc.ramitos.repository.CourseEnrollmentRepository
 
 case class RamitosContext[F[_]](
     xa: Transactor[F],
@@ -26,9 +28,11 @@ case class RamitosContext[F[_]](
     httpClient: Client[F],
     crypto: Crypto,
     jwt: JwtTokens[F, Session],
+    semesterRepository: SemesterRepository[F],
     courseRepository: CourseRepository[F],
-    courseOfferingRepository: CourseOfferingRepository[F],
+    courseOfferingRepository: DBCourseOfferingRepository[F],
     reviewRepository: ReviewRepository,
+    courseEnrollmentRepository: CourseEnrollmentRepository[F],
     portalDcc: PortalDcc[F],
     mufasaClient: MufasaApi[F],
 )
@@ -47,8 +51,10 @@ object RamitosContext {
     given jwtTokensFromContext[F[_]](using ctx: RamitosContext[F]): JwtTokens[F, Session] = ctx.jwt
     given cryptoFromContext[F[_]](using ctx: RamitosContext[F]): Crypto = ctx.crypto
     given courseRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseRepository[F] = ctx.courseRepository
-    given courseOfferingRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseOfferingRepository[F] = ctx.courseOfferingRepository
+    given semesterRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): SemesterRepository[F] = ctx.semesterRepository
+    given courseOfferingRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): DBCourseOfferingRepository[F] = ctx.courseOfferingRepository
     given reviewRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): ReviewRepository = ctx.reviewRepository
+    given courseEnrollmentRepositoryFromContext[F[_]](using ctx: RamitosContext[F]): CourseEnrollmentRepository[F] = ctx.courseEnrollmentRepository
     given dccPortalFromContext[F[_]](using ctx: RamitosContext[F]): PortalDcc[F] = ctx.portalDcc
     given askSessionFromContext[F[_]](using ctx: RamitosContext[F]): Ask[F, Session] = ctx.auth.askSession
 }

@@ -56,6 +56,7 @@ object CourseStat {
 
 case class Course(
     code: String,
+    mufasaCourseId: Int,
     name: String,
     stats: Map[Stat, CourseStat],
     tagStats: Map[String, CourseStat],
@@ -89,6 +90,7 @@ object Course {
         lazy val columnNames = all.columns.map(_.rawName).toVector
 
         val code: Column[String] = Column("code")
+        val mufasaCourseId: Column[Int] = Column("mufasa_course_id")
         val displayName: Column[String] = Column("name")
 
         val stats: Column[Map[Stat, CourseStat]] = Column("stats")
@@ -100,6 +102,7 @@ object Course {
 
         object all extends WithSQLDefinition[Course](Composite((
             code.sqlDef,
+            mufasaCourseId.sqlDef,
             displayName.sqlDef,
             stats.sqlDef,
             tagStats.sqlDef,

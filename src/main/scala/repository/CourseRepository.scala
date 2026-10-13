@@ -33,24 +33,39 @@ import cl.cadcc.ramitos.model.implicits.given
 trait CourseRepositoryOps {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
     def list(limit: Long, codes: Seq[String] = Seq.empty, from: Option[String] = None): Stream[ConnectionIO, Course]
-    def create(code: String, name: String): ConnectionIO[Course]
+    def create(code: String, mufasaId: Int, name: String): ConnectionIO[Course]
     def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean]
 }
 
-type CourseRepository[F[_]] = CourseRepositoryOps & MufasaPoller[F]
+trait CourseMufasaPatch[F[_]] {
+    def getCode(courseId: Int): F[Option[String]]
+}
+
+type CourseRepository[F[_]] = CourseRepositoryOps & MufasaPoller[F] & CourseMufasaPatch[F]
 
 object CourseRepository {
 
     def apply[F[_]](using ev: CourseRepository[F]): CourseRepository[F] = ev
 
-    def of[F[_]: {Transactor, Temporal, Supervisor, MufasaApi}](tagSettings: TagSettings): F[CourseRepository[F]] =
+    def of[F[_]: {Transactor as xa, Temporal, Supervisor, MufasaApi}](tagSettings: TagSettings): F[CourseRepository[F]] =
         val ops = CourseRepositoryOpsImpl(tagSettings)
         val cache = MufasaCache(ops)
         given MufasaCacheKeyRepository[CourseCacheKey] = MufasaCacheKeyRepository.make("CourseRepository")
-        MufasaPoller.selfScheduling(cache.updateFromMufasa)
-            .map { poller =>
-                new CourseRepositoryOpsImpl(tagSettings) with MufasaPoller.Mixin(poller)
-            }
+        for {
+            poller <- MufasaPoller.selfScheduling(cache.updateFromMufasa)
+            allCourses <- ops.listAll
+                .transact(xa)
+                .map { course => course.mufasaCourseId -> course.code }
+                .compile
+                .to(Map)
+            ans: CourseRepository[F] =
+                new CourseRepositoryOpsImpl(tagSettings)
+                    with MufasaPoller.Mixin(poller)
+                    with CourseMufasaPatch[F]
+                {
+                    override def getCode(courseId: Int): F[Option[String]] = allCourses.get(courseId).pure 
+                }
+        } yield ans
 
     private case class CourseCacheKey(
         updatedAt: Instant,
@@ -61,13 +76,15 @@ object CourseRepository {
         Temporal as F,
         MufasaApi as mufasa
     }](courseRepo: CourseRepositoryOpsImpl) {
-        type CourseData = (String, String)
+        type CourseData = (String, Int, String)
 
         private def ramoToCourseData(now: Instant)(ramo: Ramo): Either[Throwable, CourseData] =
             for {
                 code <- ramo.codigo.toRight(Exception("Missing course code"))
+                id <- ramo.idRamo.toRight(Exception("Missing course id"))
+                    .flatMap(_.toIntOption.toRight(Exception("Course id was not integer")))
                 name <- ramo.nombre.toRight(Exception("Missing course name"))
-            } yield (code, name)
+            } yield (code, id, name)
 
         private def processRamos(now: Instant, ramos: Stream[F, Ramo]): Stream[F, Chunk[CourseData]] =
             ramos
@@ -79,10 +96,10 @@ object CourseRepository {
                 }
                 .chunkN(500, true)
 
-        private def persistChunk(chunk: Chunk[(String, String)]): F[Unit] =
+        private def persistChunk(chunk: Chunk[(String, Int, String)]): F[Unit] =
             courseRepo.bulkCreate(chunk.toNel.get).transact(xa).void
 
-        private def persistCourses(courses: Stream[F, Chunk[(String, String)]]): Stream[F, Unit] =
+        private def persistCourses(courses: Stream[F, Chunk[(String, Int, String)]]): Stream[F, Unit] =
             courses.evalMap(persistChunk)
         
         def updateFromMufasa(cacheKey: Option[CourseCacheKey]): F[(CourseCacheKey, Option[Instant])] =
@@ -149,9 +166,10 @@ object CourseRepository {
                 ++ fr"ORDER BY ${Table.code} LIMIT $limit"
             sql.query[Course].stream
 
-        def create(code: String, name: String): ConnectionIO[Course] = {
+        def create(code: String, mufasaId: Int, name: String): ConnectionIO[Course] = {
             Table.insertInto(NonEmptyVector.of(
                     Table.code --> code,
+                    Table.mufasaCourseId --> mufasaId,
                     Table.displayName --> name,
                     Table.stats --> emptyStats,
                     Table.tagStats --> emptyTagStats ))
@@ -173,12 +191,16 @@ object CourseRepository {
                 ans <- sql.update.run.map(_ == 1)
             } yield ans
 
-        private[CourseRepository] def bulkCreate(data: NonEmptyList[(String, String)]): ConnectionIO[Int] =
-            val rows = data.map { (l, r) => fr"($l, $r, $emptyStats, $emptyTagStats)" }.reduceLeft { (l, r) => fr"$l, $r" }
+        private[CourseRepository] def bulkCreate(data: NonEmptyList[(String, Int, String)]): ConnectionIO[Int] =
+            val rows = data.map { (c, id, n) => fr"($c, $id, $n, $emptyStats, $emptyTagStats)" }.reduceLeft { (l, r) => fr"$l, $r" }
             sql"""
-                INSERT INTO $Table (${Table.code}, ${Table.displayName}, ${Table.stats}, ${Table.tagStats})
+                INSERT INTO $Table (${Table.code}, ${Table.mufasaCourseId}, ${Table.displayName}, ${Table.stats}, ${Table.tagStats})
                 VALUES $rows
                 ON CONFLICT (code) DO NOTHING"""
                 .update.run
+
+        private[CourseRepository] def listAll: Stream[ConnectionIO, Course] =
+            sql"SELECT ${Table.all} FROM $Table"
+                .query[Course].stream
     }
 }

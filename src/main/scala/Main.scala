@@ -35,7 +35,9 @@ import cats.effect.std.Supervisor
 import cl.cadcc.ramitos.config.MufasaConfig
 import smithy4s.http4s.ClientEndpointMiddleware
 import cl.cadcc.ramitos.middleware.ClientAuth
-import cl.cadcc.ramitos.repository.CourseOfferingRepository
+import cl.cadcc.ramitos.repository.SemesterRepository
+import cl.cadcc.ramitos.repository.DBCourseOfferingRepository
+import cl.cadcc.ramitos.repository.CourseEnrollmentRepository
 
 object Main extends IOApp {
     given logging: LoggerFactory[IO] = Slf4jFactory.create[IO]
@@ -82,10 +84,14 @@ object Main extends IOApp {
             given Supervisor[IO] <- Supervisor(using Concurrent[IO])
             portalDcc <- PortalDcc.ofConf[IO](conf.auth.portalDcc).pure[ResourceIO]
             auth <- AuthMiddleware.ofJwtTokens(using jwt).toResource
+            semesterRepository <- SemesterRepository.of[IO].pure[ResourceIO]
+            given SemesterRepository[IO] = semesterRepository
             courseRepository <- CourseRepository.of(conf.app.tags).toResource
-            courseOfferingRepository <- CourseOfferingRepository.ofTemporal[IO].toResource
+            courseOfferingRepository <- DBCourseOfferingRepository.ofTemporal[IO].toResource
+            given DBCourseOfferingRepository[IO] = courseOfferingRepository
             reviewRepository = ReviewRepository.ofCourseRepository(courseRepository)
-        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, courseRepository,courseOfferingRepository, reviewRepository, portalDcc, mufasaClient)
+            enrollmentRepository <- CourseEnrollmentRepository.of[IO].toResource
+        } yield RamitosContext(xa, conf, auth, logging, client, crypto, jwt, semesterRepository, courseRepository, courseOfferingRepository, reviewRepository, enrollmentRepository, portalDcc, mufasaClient)
 
     override def run(args: List[String]): IO[ExitCode] =
         (for {

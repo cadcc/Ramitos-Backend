@@ -71,6 +71,8 @@ case class Semester(year: Short, semesterType: SemesterType) derives Codec, Read
       case _ => year
     }
     Semester(y, semesterType.prev)
+
+  def toMufasa: String = s"$year.${semesterType.index}"
 }
 
 object Semester {
@@ -79,4 +81,13 @@ object Semester {
   def between[F[_]](start: Semester, end: Semester): Stream[F, Semester] =
     Stream.iterate(start)(_.next)
       .takeWhile(_ <= end)
+
+  def fromMufasaOption(id: String): Option[Semester] =
+    for {
+      dotPos <- id.indexOf(".").some.ensure(())(_ != -1)
+      year <- id.substring(0, dotPos).strip.toShortOption
+      semesterTypeIdx <- id.substring(dotPos+1).strip.toIntOption
+      semesterType <- SemesterType.ofIndex(semesterTypeIdx)
+    } yield Semester(year, semesterType)
+
 }

@@ -36,7 +36,7 @@ object CourseEnrollment {
 case class CourseEnrollmentCache(
     mufasaId: String,
     /// These are not DB-Backed!!!, do not use for joins.
-    transientData: Vector[CourseOffering],
+    transientData: Vector[TransientCourseOffering],
     /// Permanent data is cached up to this semester
     semesterSynced: Semester,
     lastUpdate: Instant,
@@ -48,9 +48,9 @@ object CourseEnrollmentCache {
         lazy val columnNames = all.columns.map(_.rawName).toVector
 
         val mufasaId: Column[String] = Column("mufasa_id")
-        val transientData: Column[Vector[CourseOffering]] = Column("transient_data")
-        private val semesterSyncedYear: Column[Short] = Column("semester_synced_year")
-        private val semesterSyncedType: Column[SemesterType] = Column("semester_synced_type")
+        val transientData: Column[Vector[TransientCourseOffering]] = Column("transient_data")
+        val semesterSyncedYear: Column[Short] = Column("semester_synced_year")
+        val semesterSyncedType: Column[SemesterType] = Column("semester_synced_type")
         val lastPull: Column[Instant] = Column("last_pull")
 
         val semesterSynced: SQLDefinition[Semester] = Composite((
