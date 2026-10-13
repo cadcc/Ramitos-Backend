@@ -41,6 +41,7 @@ object SemesterType {
     case "year" => YEAR.some
     case "fall" => FALL.some
     case "spring" => SPRING.some
+    case "summer" => SUMMER.some
     case _ => None
   }
 
