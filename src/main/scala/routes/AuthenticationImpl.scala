@@ -56,6 +56,7 @@ import cl.cadcc.ramitos.utils.PortalDcc.InvariantBroken
 import cats.effect.Sync
 import cats.effect.Concurrent
 import cats.effect.Async
+import cl.cadcc.ramitos.repository.CourseEnrollmentRepository
 
 object Authentication {
     sealed abstract class DccLoginState {
@@ -81,6 +82,7 @@ object Authentication {
         LoggerFactory,
         UUIDGen,
         Random,
+        CourseEnrollmentRepository
     }](using
         JwtTokens[F, Session],
         Crypto,
@@ -98,6 +100,7 @@ object Authentication {
         LoggerFactory as logging,
         UUIDGen as uuidGen,
         Random as rand,
+        CourseEnrollmentRepository as enrollRepository,
     }](sto: MapRef[F, String, Option[DccLoginState]])(
         using jwt: JwtTokens[F, Session],
         crypto: Crypto,
@@ -193,6 +196,7 @@ object Authentication {
                         if expiresAt.isBefore(now) then (None, F.raiseError[Uri](WorkflowTimeout(startUri.toString)))
                         else (state.some, F.pure(redirect))
                 }.flatten
+                _ <- enrollRepository.poll(login.mufasaId)
                 finalUri = redirectUri +? ("secret", secret) +? ("status", "ok") +? ("workflow", "dccLogin")
             } yield DccLoginCallbackOutput(finalUri.toString)
 
