@@ -47,7 +47,7 @@ object CourseEnrollmentCache {
         lazy val columns = Composite(all)
         lazy val columnNames = all.columns.map(_.rawName).toVector
 
-        val mufasaId: Column[String] = Column("mufasa_id")
+        val mufasaId: Column[String] = Column("student_mufasa_id")
         val transientData: Column[Vector[TransientCourseOffering]] = Column("transient_data")
         val semesterSyncedYear: Column[Short] = Column("semester_synced_year")
         val semesterSyncedType: Column[SemesterType] = Column("semester_synced_type")
