@@ -143,7 +143,7 @@ object DBCourseOfferingRepository {
         }
         .evalMapFilter {
           case Right(v) => v.some.pure
-          case Left(err) => logger.trace(err)(s"Could not extract data from course.") *> None.pure
+          case Left(err) => logger.debug(err)(s"Could not extract data from course.") *> None.pure
         }
         .map { par => (par._1, Semester(par._2, par._3), par._4, par._5) }
 
