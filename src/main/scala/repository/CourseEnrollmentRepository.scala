@@ -24,6 +24,7 @@ import java.time.temporal.TemporalUnit
 import java.time.temporal.ChronoUnit
 import cats.data.OptionT
 import cats.data.EitherT
+import cl.cadcc.ramitos.model.SemesterType
 
 /// Any enrollment from a semester before the
 /// watermark will not change in our database.
@@ -150,8 +151,10 @@ object CourseEnrollmentRepository {
         FROM $Table JOIN $OfferingTable ON ${Table.courseOfferingId === OfferingTable.id}
         ORDER BY $orderCols $order
       """
-      sql.query[(String, Int, Int, Semester, Short)]
-        .map { (code, id, mufasaId, semester, section) => (id, code, mufasaId, semester, section) }
+      sql.query[(String, Int, Int, Short, SemesterType, Short)]
+        .map { (code, id, mufasaId, year, semester, section) =>
+          (id, code, mufasaId, Semester(year, semester), section)
+        }
         .map(DBCourseOffering.apply)
         .to[Vector]
 
