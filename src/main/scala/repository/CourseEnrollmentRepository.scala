@@ -189,7 +189,7 @@ object CourseEnrollmentRepository {
           data.year = offerings.year AND
           data.semesterType = offerings.semester AND
           data.section = offerings.section
-      """"
+      """
         .update
         .run
         .void
@@ -202,7 +202,7 @@ object CourseEnrollmentRepository {
             CacheTable.semesterSyncedType --> watermark.semesterType,
             CacheTable.lastPull --> now,
         )} WHERE ${CacheTable.mufasaId === mufasaId}
-      """"
+      """
         .update
         .run
         .void
