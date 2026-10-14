@@ -51,7 +51,7 @@ class CourseImpl[
             enrolledCodes = enrolledCourses.map(_.courseCode).toSet
             reqCodes = codes match {
                 case Some(l) => l.toSet
-                case None => Set.empty
+                case None => enrolledCodes
             }
             listCodes =
                 if enrolled then enrolledCodes.intersect(reqCodes).toSeq

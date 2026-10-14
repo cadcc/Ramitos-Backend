@@ -149,6 +149,7 @@ object CourseEnrollmentRepository {
       val sql = sql"""
         SELECT $cols
         FROM $Table JOIN $OfferingTable ON ${Table.courseOfferingId === OfferingTable.id}
+        WHERE ${Table.studentMufasaId === mufasaId}
         ORDER BY $orderCols $order
       """
       sql.query[DBCourseOffering]
