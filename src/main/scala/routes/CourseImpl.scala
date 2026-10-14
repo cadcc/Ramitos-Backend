@@ -37,8 +37,9 @@ class CourseImpl[
     override def listCourses(limit: Long, codes: Option[List[String]], enrolled: Option[Boolean], reviewable: Option[Boolean], after: Option[String]): F[ListCoursesOutput] =
         val enroll = enrolled.getOrElse(false)
         val review = reviewable.getOrElse(false)
+        val cond = enroll || review
         session.ask.flatMap {
-            case Some(Session(account = Account(mufasaId = Some(v)))) => listAuth(v, limit, codes, enroll, review, after)
+            case Some(Session(account = Account(mufasaId = Some(v)))) => listAuth(v, limit, codes, cond, cond, after)
             case _ => listNoAuth(limit, codes, after)
         }
 
