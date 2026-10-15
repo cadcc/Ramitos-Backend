@@ -36,7 +36,7 @@ object AccountRepository {
         }
 
         if fragList.nonEmpty then
-            fragList += Table.updatedAt --> updatedAt.atOffset(ZoneOffset.UTC).toLocalDateTime
+            fragList += Table.updatedAt --> updatedAt
             val upds: NonEmptyVector[(Fragment, Fragment)] = NonEmptyVector.fromVectorUnsafe(fragList.toVector)
 
             sql"${Table.updateTable(upds)} WHERE ${Table.id === id}"

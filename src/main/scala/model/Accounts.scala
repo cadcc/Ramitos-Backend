@@ -1,7 +1,7 @@
 package cl.cadcc.ramitos.model
 
 import cats.syntax.all.*
-import java.time.LocalDateTime
+import java.time.Instant
 import doobie.{Column, Columns, Composite, Meta, TableDefinition, WithSQLDefinition}
 import doobie.postgres.implicits.*
 import cl.cadcc.ramitos.schema.{Account as SchemaAccount, AccountRole as SchemaRole}
@@ -14,6 +14,7 @@ import doobie.util.{Get, Put, Read, Write}
 import scala.deriving.Mirror
 import cats.kernel.Order
 import implicits.given
+import smithy4s.time.Timestamp
 
 enum AccountRole(val s: String, val order: Int) derives Codec:
     case NONE extends AccountRole("none", 0)
@@ -50,8 +51,8 @@ case class Account(
         /// Normalized to no leading zeros, no dots, no verifier digit.
         mufasaId: Option[String],
         role: AccountRole,
-        createdAt: LocalDateTime,
-        updatedAt: LocalDateTime
+        createdAt: Instant,
+        updatedAt: Instant
     ) derives Codec, Read, Write
 
 given accountConvert: SchemaModelConvert[Account, SchemaAccount] = SchemaModelConvert.instance { acc =>
@@ -60,8 +61,8 @@ given accountConvert: SchemaModelConvert[Account, SchemaAccount] = SchemaModelCo
         name = acc.displayName,
         mufasaId = acc.mufasaId,
         role = acc.role.toSchema,
-        created_at = acc.createdAt.toSchema,
-        updated_at = acc.updatedAt.toSchema,
+        created_at = Timestamp.fromInstant(acc.createdAt),
+        updated_at = Timestamp.fromInstant(acc.updatedAt),
     )
 }
 
@@ -75,8 +76,8 @@ object Account {
         val displayName: Column[String] = Column("name")
         val mufasaId: Column[Option[String]] = Column("mufasa_id")
         val role: Column[AccountRole] = Column("role")
-        val createdAt: Column[LocalDateTime] = Column("created_at")
-        val updatedAt: Column[LocalDateTime] = Column("updated_at")
+        val createdAt: Column[Instant] = Column("created_at")
+        val updatedAt: Column[Instant] = Column("updated_at")
 
         object all extends WithSQLDefinition[Account](Composite((
             id.sqlDef,
