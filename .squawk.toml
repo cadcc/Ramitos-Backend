@@ -1,0 +1,15 @@
+
+excluded_rules = [
+  "prefer-text-field",
+  "prefer-bigint-over-int",
+  "prefer-bigint-over-smallint",
+  "ban-drop-table",
+  "ban-drop-type",
+  "ban-drop-column",
+  "adding-not-nullable-field",
+  "require-statement-timeout",
+  "require-lock-timeout"
+]
+
+pg_version = "18.0"
+assume_in_transaction = true

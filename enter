@@ -1,0 +1,5 @@
+#!/usr/bin/fish
+
+devcontainer up --docker-path podman --remove-existing-container
+devcontainer exec podman compose -f /workdir/.devcontainer/compose.yml up -d
+devcontainer exec env TERM="$TERM" COLORTERM="$COLORTERM" DB_HOST="localhost" DB_USER="desarrollo" DB_PASS="desarroll0" DATABASE_URL="postgres://desarrollo:desarroll0@localhost:5432/ramitos?search_path=public&sslmode=disable" DBMATE_MIGRATIONS_DIR="migrations/" DBMATE_SCHEMA_FILE="src/main/resources/ddl.sql" fish -l

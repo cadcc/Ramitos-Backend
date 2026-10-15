@@ -1,0 +1,41 @@
+{
+  "name": "Ramitos Back",
+  "image": "mcr.microsoft.com/devcontainers/java:17",
+  "workspaceFolder": "/workdir",
+  "workspaceMount": "src=${localWorkspaceFolder},dst=/workdir,type=bind,consistency=cached,Z",
+  "mounts": [
+    "type=bind,src=${localEnv:HOME}/.config/helix/config.toml,dst=/root/.config/helix/config.toml,ro,z",
+    "type=bind,src=${localEnv:HOME}/.gitconfig,dst=/root/.gitconfig,ro,z",
+    "type=bind,src=${localEnv:HOME}/.ssh/config,dst=/root/.ssh/config,ro,z",
+    "type=bind,src=${localEnv:HOME}/.ssh/github,dst=/root/.ssh/github,ro,z",
+    // Podman in podman: nested podman config and a volume for its storage (avoids overlay on overlay)
+    "type=bind,src=${localWorkspaceFolder}/.devcontainer/containers.conf,dst=/etc/containers/containers.conf,ro,z",
+    "type=volume,src=ramitos-back-podman-storage,dst=/var/lib/containers"
+  ],
+  "remoteUser": "root",
+  "containerUser": "root",
+  "features": {
+    "ghcr.io/devcontainers-extra/features/apt-get-packages:1": {
+      "packages": "ssh,fish,hx,gzip,podman,podman-compose,podman-docker,crun,fuse-overlayfs,uidmap,netavark,aardvark-dns,passt,nftables,postgresql-common,python3-pip",
+      "preserve_apt_list": true
+    },
+    //"ghcr.io/wxw-matt/devcontainer-features/command_runner:0.5.0": {
+    //  "command1": "curl -fL 'https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz' | gzip -d > ./cs",
+    //  "command2": "chmod +x ./cs",
+    //  "command3": "./cs setup -y"
+    //}
+    "ghcr.io/devcontainers-extra/features/bash-command:1": {
+      "command": "curl -fL 'https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz' | gzip -d > ./cs && chmod +x ./cs && ./cs setup -y && mkdir -p ~/.config/fish && echo 'fish_add_path ~/.local/share/coursier/bin' >> ~/.config/fish/config.fish && ~/.local/share/coursier/bin/cs install metals && curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64 && chmod +x /usr/local/bin/dbmate && pip install squawk-cli --break-system-packages && (echo \"\\n\" | /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh) && apt-get install -y postgresql-client-18"
+    }
+  },
+  "runArgs": [
+    "--name", "RamitosBack",
+    // Podman in podman
+    "--privileged",
+    "--device", "/dev/fuse",
+    "--security-opt", "label=disable",
+    // Tools that detect they run in a container (e.g. atlas docker:// dev databases) reach
+    // published ports via host.docker.internal; nested containers publish them here, not on the host
+    "--add-host", "host.docker.internal:127.0.0.1"
+  ]
+}
