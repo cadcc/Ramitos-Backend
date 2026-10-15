@@ -36,7 +36,7 @@ trait CourseRepositoryOps {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
     def list(limit: Long, codes: Option[Seq[String]] = None, from: Option[String] = None): Stream[ConnectionIO, Course]
     def create(code: String, mufasaId: Int, name: String): ConnectionIO[Course]
-    def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean]
+    def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat], hasComment: Boolean): ConnectionIO[Boolean]
 }
 
 trait CourseMufasaPatch[F[_]] {
@@ -178,13 +178,15 @@ object CourseRepository {
                     Table.code --> code,
                     Table.mufasaCourseId --> mufasaId,
                     Table.displayName --> name,
+                    Table.totalReviews --> 0,
+                    Table.commentReviews --> 0,
                     Table.stats --> emptyStats,
                     Table.tagStats --> emptyTagStats ))
                 .update
                 .withUniqueGeneratedKeys(Table.columnNames*)
         }
 
-        def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean] =
+        def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat], hasComment: Boolean): ConnectionIO[Boolean] =
             for {
                 now <- ConnF.realTimeInstant
                 sql =
@@ -193,6 +195,8 @@ object CourseRepository {
                             Table.updatedAt --> now,
                             Table.stats --> stats,
                             Table.tagStats --> tagStats,
+                            Table.totalReviews --> (Table.totalReviews + 1),
+                            Table.commentReviews --> (if hasComment then Table.commentReviews + 1 else Table.commentReviews)
                         )
                     } WHERE ${Table.code === code}"
                 ans <- sql.update.run.map(_ == 1)

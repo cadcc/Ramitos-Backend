@@ -82,6 +82,9 @@ structure Course {
   reviewCount: Integer
 
   @required
+  commentReviewCount: Integer
+
+  @required
   stats: CourseStats
 
   @required

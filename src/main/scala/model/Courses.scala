@@ -58,6 +58,8 @@ case class Course(
     code: String,
     mufasaCourseId: Int,
     name: String,
+    totalReviews: Int,
+    commentReviews: Int,
     stats: Map[Stat, CourseStat],
     tagStats: Map[String, CourseStat],
     createdAt: Instant,
@@ -93,6 +95,9 @@ object Course {
         val mufasaCourseId: Column[Int] = Column("mufasa_course_id")
         val displayName: Column[String] = Column("name")
 
+        val totalReviews: Column[Int] = Column("total_reviews")
+        val commentReviews: Column[Int] = Column("comment_reviews")
+
         val stats: Column[Map[Stat, CourseStat]] = Column("stats")
         
         val tagStats: Column[Map[String, CourseStat]] = Column("tag_stats")
@@ -104,6 +109,8 @@ object Course {
             code.sqlDef,
             mufasaCourseId.sqlDef,
             displayName.sqlDef,
+            totalReviews.sqlDef,
+            commentReviews.sqlDef,
             stats.sqlDef,
             tagStats.sqlDef,
             createdAt.sqlDef,

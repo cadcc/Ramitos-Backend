@@ -147,7 +147,9 @@ CREATE TABLE public.courses (
     stats jsonb NOT NULL,
     tag_stats jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    total_reviews integer NOT NULL,
+    comment_reviews integer NOT NULL
 );
 
 
@@ -422,4 +424,5 @@ ALTER TABLE ONLY public.reviews
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-    ('20261015180414');
+    ('20261015180414'),
+    ('20261015192349');

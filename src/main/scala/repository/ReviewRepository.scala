@@ -84,7 +84,7 @@ object ReviewRepository {
                         .getOrRaise(EntityNotFoundException("Course not found"))
                 review <- rawCreate(accountId, courseCode, comments, stats, tags)
                 updCourse = course.mergeStats(review.stats, review.tags.toSet)
-                _ <- courseRepository.updateStats(updCourse.code, updCourse.stats, updCourse.tagStats)
+                _ <- courseRepository.updateStats(updCourse.code, updCourse.stats, updCourse.tagStats, comments.isDefined)
             } yield review
 
         def rawCreate(
