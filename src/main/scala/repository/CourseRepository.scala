@@ -93,7 +93,7 @@ object CourseRepository {
 
         private def processRamos(now: Instant, ramos: Stream[F, Ramo]): Stream[F, Chunk[CourseData]] =
             ramos
-                .filter(_.codigo.fold(false)(_.startsWith("CC")))
+                .filter(_.idInstitucion.fold(false)(_ == "5"))
                 .map(ramoToCourseData(now))
                 .evalMapFilter {
                     case Left(value) => None.pure
