@@ -203,9 +203,9 @@ object CourseRepository {
             } yield ans
 
         private[CourseRepository] def bulkCreate(data: NonEmptyList[(String, Int, String)]): ConnectionIO[Int] =
-            val rows = data.map { (c, id, n) => fr"($c, $id, $n, $emptyStats, $emptyTagStats)" }.reduceLeft { (l, r) => fr"$l, $r" }
+            val rows = data.map { (c, id, n) => fr"($c, $id, $n, $emptyStats, $emptyTagStats, 0, 0)" }.reduceLeft { (l, r) => fr"$l, $r" }
             sql"""
-                INSERT INTO $Table (${Table.code}, ${Table.mufasaCourseId}, ${Table.displayName}, ${Table.stats}, ${Table.tagStats})
+                INSERT INTO $Table (${Table.code}, ${Table.mufasaCourseId}, ${Table.displayName}, ${Table.stats}, ${Table.tagStats}, ${Table.totalReviews}, ${Table.commentReviews})
                 VALUES $rows
                 ON CONFLICT (code) DO NOTHING
             """
