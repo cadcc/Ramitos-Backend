@@ -34,7 +34,7 @@ import org.typelevel.log4cats.LoggerFactory
 
 trait CourseRepositoryOps {
     def getByCode(code: String, forUpdate: Boolean = false): ConnectionIO[Option[Course]]
-    def list(limit: Long, codes: Seq[String] = Seq.empty, from: Option[String] = None): Stream[ConnectionIO, Course]
+    def list(limit: Long, codes: Option[Seq[String]] = None, from: Option[String] = None): Stream[ConnectionIO, Course]
     def create(code: String, mufasaId: Int, name: String): ConnectionIO[Course]
     def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat]): ConnectionIO[Boolean]
 }
@@ -159,11 +159,10 @@ object CourseRepository {
             sql.query[Course]
                 .option
 
-        def list(limit: Long, codes: Seq[String] = Seq.empty, from: Option[String] = None): Stream[ConnectionIO, Course] =
+        def list(limit: Long, codes: Option[Seq[String]] = None, from: Option[String] = None): Stream[ConnectionIO, Course] =
             val where = mkWhere(
                 from.map(Table.code > _),
-                if codes.isEmpty then None
-                else Some(Table.code.in(codes)),
+                codes.map(c => Table.code.in(c))
             )
             val sql =
                 sql"""

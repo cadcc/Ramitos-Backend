@@ -58,7 +58,7 @@ class CourseImpl[
                 if enrolled then enrolledCodes.intersect(reqCodes).toSeq
                 else codes.getOrElse(List.empty).toSeq
             courses <- courseRepository
-                .list(limit, listCodes, after)
+                .list(limit, listCodes.some, after)
                 .map(course => modelToSchema(enrolledCodes.contains(course.code).some)(course))
                 .compile
                 .toList
@@ -66,7 +66,7 @@ class CourseImpl[
         } yield ListCoursesOutput(courses)
 
     private def listNoAuth(limit: Long, codes: Option[List[String]], after: Option[String]): F[ListCoursesOutput] =
-        courseRepository.list(limit, codes.getOrElse(List.empty), after)
+        courseRepository.list(limit, codes.map(_.toSeq), after)
             .map(modelToSchema(None))
             .compile.toList
             .transact(xa)
