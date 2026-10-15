@@ -2,7 +2,6 @@ package cl.cadcc.ramitos.model
 
 import cl.cadcc.ramitos.model.Stat
 import doobie.*
-import doobie.implicits.*
 import doobie.postgres.implicits.*
 
 import java.time.Instant

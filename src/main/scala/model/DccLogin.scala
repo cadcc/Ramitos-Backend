@@ -4,7 +4,6 @@ import cl.cadcc.ramitos.model.Password.Table.all
 
 import java.time.{Instant, LocalDateTime}
 import doobie.{Column, Columns, Composite, TableDefinition, WithSQLDefinition}
-import doobie.implicits.javatimedrivernative.*
 import doobie.util.{Write, Read}
 import implicits.given
 

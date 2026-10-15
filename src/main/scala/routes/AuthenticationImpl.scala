@@ -1,7 +1,7 @@
 package cl.cadcc.ramitos.routes
 
-import doobie._, cats.syntax.all._, cats.effect.syntax.all._
-import doobie.implicits._, cats.implicits._, cats.effect.implicits._
+import doobie._, cats.syntax.all._, cats.effect.syntax.all._, doobie.syntax.all._
+import cats.implicits._, cats.effect.implicits._
 
 import cats.effect.kernel.Clock
 import cl.cadcc.ramitos.schema.AuthenticationService

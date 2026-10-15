@@ -4,7 +4,6 @@ import doobie.WithSQLDefinition
 import doobie.Column
 import doobie.Composite
 import doobie.TableDefinition
-import doobie.implicits.*
 import doobie.postgres.implicits.*
 import cl.cadcc.ramitos.model.implicits.given
 import java.time.Instant

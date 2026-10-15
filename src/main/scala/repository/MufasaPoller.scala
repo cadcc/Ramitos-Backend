@@ -1,6 +1,7 @@
 package cl.cadcc.ramitos.repository
 
 import cats.syntax.all.*, cats.effect.syntax.all.*
+import doobie.syntax.all.*
 import java.time.Instant
 import java.util.UUID
 import cats.effect.Fiber
@@ -24,8 +25,8 @@ import java.time.temporal.TemporalQuery
 import java.time.Duration
 import scala.jdk.DurationConverters.given
 import cats.effect.kernel.Outcome
-import doobie.implicits.given
 import cats.effect.Resource
+import cl.cadcc.ramitos.model.implicits.given
 
 trait MufasaPoller[F[_]] private[repository] {
   def schedule(at: Instant, cause: MufasaPoller.ScheduleReason): F[Unit]

@@ -1,7 +1,7 @@
 package cl.cadcc.ramitos.repository
 
 import cats._, cats.data._, cats.implicits._
-import doobie._, doobie.implicits._, doobie.syntax.all._
+import doobie._, doobie.syntax.all._
 import cl.cadcc.ramitos.model.implicits.given
 import cl.cadcc.ramitos.model.Account
 import cl.cadcc.ramitos.model.AccountRole
