@@ -166,9 +166,12 @@ object CourseRepository {
                 else Some(Table.code.in(codes)),
             )
             val sql =
-                fr"SELECT ${Table.all} FROM $Table"
-                ++ where
-                ++ fr"ORDER BY ${Table.code} LIMIT $limit"
+                sql"""
+                    SELECT ${Table.all} FROM $Table
+                    $where
+                    ORDER BY ${Table.code}
+                    LIMIT $limit
+                """
             sql.query[Course].stream
 
         def create(code: String, mufasaId: Int, name: String): ConnectionIO[Course] = {
