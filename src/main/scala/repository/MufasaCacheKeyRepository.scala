@@ -17,6 +17,7 @@ import doobie.util.Put
 import doobie.generic.auto.given
 import MufasaCacheKeyRepository.MufasaCacheData
 import java.time.Instant
+import cl.cadcc.ramitos.model.implicits.given
 
 trait MufasaCacheKeyRepository[Value] private[repository] (val key: String) {
   type Data = MufasaCacheData[Value]

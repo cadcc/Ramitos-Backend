@@ -15,6 +15,7 @@ import scala.collection.mutable.ListBuffer
 import doobie.util.fragment.Fragment
 import cats.MonadThrow
 import cats.syntax.all._
+import implicits.given
 
 case class Password(
     username: String,

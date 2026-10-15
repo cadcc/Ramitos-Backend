@@ -10,6 +10,7 @@ import doobie.Composite
 import java.time.Instant
 import java.util.Date
 import doobie.SQLDefinition
+import implicits.given
 
 sealed trait CourseOffering(
     _id: Option[Int],

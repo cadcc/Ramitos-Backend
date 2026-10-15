@@ -7,6 +7,7 @@ import cl.cadcc.ramitos.config.TagSettings
 import cl.cadcc.ramitos.model.{Course, CourseStat, Stat}
 import doobie.*
 import doobie.implicits.*
+import cl.cadcc.ramitos.model.implicits.given
 import doobie.syntax.all.*
 import fs2.Stream
 

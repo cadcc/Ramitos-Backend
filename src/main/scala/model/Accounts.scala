@@ -13,6 +13,7 @@ import doobie.util.{Get, Put, Read, Write}
 
 import scala.deriving.Mirror
 import cats.kernel.Order
+import implicits.given
 
 enum AccountRole(val s: String, val order: Int) derives Codec:
     case NONE extends AccountRole("none", 0)

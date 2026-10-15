@@ -6,6 +6,7 @@ import java.time.{Instant, LocalDateTime}
 import doobie.{Column, Columns, Composite, TableDefinition, WithSQLDefinition}
 import doobie.implicits.javatimedrivernative.*
 import doobie.util.{Write, Read}
+import implicits.given
 
 case class DccLogin(
     ucampusId: String,

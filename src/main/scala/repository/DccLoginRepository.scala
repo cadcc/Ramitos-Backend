@@ -8,6 +8,7 @@ import cl.cadcc.ramitos.model.{Account, AccountRole, DccLogin}
 import doobie.free.connection.ConnectionIO
 import doobie.syntax.all.*
 import doobie.implicits.given
+import cl.cadcc.ramitos.model.implicits.given
 
 import scala.language.implicitConversions
 

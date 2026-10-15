@@ -15,6 +15,7 @@ import cl.cadcc.ramitos.model.implicits.given
 import io.circe.{Codec, Decoder, Encoder, Json}
 import io.circe.syntax.*
 
+import implicits.given
 
 enum Stat(val s: String) {
     case DOCENCIA extends Stat("docencia")

@@ -3,6 +3,7 @@ package cl.cadcc.ramitos.repository
 import cats.syntax.all.*
 import cats.data.{NonEmptyList, OptionT}
 import cl.cadcc.ramitos.model.{Course, Review, Stat}
+import cl.cadcc.ramitos.model.implicits.given
 import doobie.syntax.all.*
 import doobie.{ConnectionIO, Fragment}
 import fs2.Stream

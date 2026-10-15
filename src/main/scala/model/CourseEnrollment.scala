@@ -14,6 +14,7 @@ import io.circe.Codec
 import doobie.util.Put
 import doobie.util.Get
 import doobie.SQLDefinition
+import implicits.given
 
 case class CourseEnrollment(
   studentMufasaId: String,

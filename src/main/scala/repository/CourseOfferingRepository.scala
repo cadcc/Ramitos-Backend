@@ -22,6 +22,7 @@ import doobie.util.transactor.Transactor
 import cats.effect.std.Supervisor
 import org.typelevel.log4cats.LoggerFactory
 import scala.language.implicitConversions
+import cl.cadcc.ramitos.model.implicits.given
 
 trait DBCourseOfferingRepositoryOps {
   def list(

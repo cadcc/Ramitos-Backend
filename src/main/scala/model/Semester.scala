@@ -10,6 +10,7 @@ import doobie.postgres.implicits.pgEnumStringOpt
 import cats.Order
 import fs2.Stream
 import fs2.Pure
+import implicits.given
 
 enum SemesterType(val s: String, val index: Int) derives Codec {
   case YEAR extends SemesterType("year", 0)

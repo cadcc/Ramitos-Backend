@@ -25,6 +25,7 @@ import java.time.temporal.ChronoUnit
 import cats.data.OptionT
 import cats.data.EitherT
 import cl.cadcc.ramitos.model.SemesterType
+import cl.cadcc.ramitos.model.implicits.given
 
 /// Any enrollment from a semester before the
 /// watermark will not change in our database.
