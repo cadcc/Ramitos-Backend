@@ -7,6 +7,8 @@ import doobie.postgres.circe.Instances.JsonbInstances
 import doobie.util.{Get, Put}
 import io.circe.{Decoder, Encoder, Json}
 import io.circe.syntax.*
+import java.time.Instant
+import doobie.Meta
 
 object implicits
     extends JsonbInstances
@@ -18,6 +20,8 @@ object implicits
     with PostgresJavaTimeMetaInstances
 {
     import cl.cadcc.ramitos.model.Stat
+
+    given Meta[Instant] = JavaInstantMeta
 
     given stringMapGet[A: Decoder]: Get[Map[String, A]] = Get[Json].temap { json =>
         for {
