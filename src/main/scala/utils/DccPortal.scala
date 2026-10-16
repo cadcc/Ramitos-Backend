@@ -30,6 +30,7 @@ import java.util.Base64
 import java.nio.charset.StandardCharsets
 import cats.effect.kernel.Sync
 import java.time.Instant
+import cl.cadcc.ramitos.utils.Base32
 
 trait PortalDcc[F[_]] {
     def authUri: F[Uri]
@@ -87,14 +88,12 @@ object PortalDcc {
         jwtTokens: JwtTokens[F, CallbackData],
         nonces: MapRef[F, String, Option[Timeout]],
     ) extends PortalDcc[F] {
-        private val encoder = Base64.getEncoder
         
         override val authUri: F[Uri] =
             for {
                 now <- clk.realTimeInstant
                 nonce <- rand.nextBytes(24)
-                    .map(encoder.encode)
-                    .map(arr => String(arr, StandardCharsets.UTF_8))
+                    .map(s => Base32.encode(s))
                 _ <- nonces(nonce).flatModify {
                     case None => (Some(now.plusSeconds(config.jwt.accessTokenLifeSeconds + config.jwt.leewaySeconds)), F.unit)
                     case Some(_) => (None, NonceError("Statistically imposible event just happend... try again!").raiseError)
