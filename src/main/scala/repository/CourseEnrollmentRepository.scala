@@ -192,6 +192,7 @@ object CourseEnrollmentRepository {
           data.year = offerings.year AND
           data.semesterType = offerings.semester AND
           data.section = offerings.section
+        ON CONFLICT (${Table.studentMufasaId}, ${Table.courseOfferingId}) DO NOTHING
       """
         .update
         .run
