@@ -166,11 +166,13 @@ object CourseEnrollmentRepository {
       sql"""
         INSERT INTO $CacheTable (${CacheTable.mufasaId}, ${CacheTable.transientData}, ${CacheTable.semesterSynced}, ${CacheTable.lastPull})
         VALUES ($mufasaId, ${Vector.empty[TransientCourseOffering]}, ${semesterFloor.prev}, $now)
-        ON CONFLICT (${CacheTable.mufasaId}) DO SELECT
-        RETURNING *
+        ON CONFLICT (${CacheTable.mufasaId}) DO NOTHING
       """
         .update
-        .withUniqueGeneratedKeys(CacheTable.columnNames*)
+        .run
+      *> sql"SELECT ${CacheTable.all} FROM $CacheTable WHERE ${CacheTable.mufasaId === mufasaId}"
+        .query[CourseEnrollmentCache]
+        .unique
 
     private def bulkCreate(mufasaId: String)(data: Chunk[CourseOffering]): ConnectionIO[Unit] =
       val rows = data
