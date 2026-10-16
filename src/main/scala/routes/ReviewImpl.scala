@@ -13,11 +13,12 @@ import cl.cadcc.ramitos.repository.ReviewRepository
 import cl.cadcc.ramitos.routes.utils.*
 import cl.cadcc.ramitos.schema
 import cl.cadcc.ramitos.schema.{DuplicatedEntity, InsufficientPermissions, ListReviewsOutput, NotFound, Review, ReviewService, ReviewStats}
+import cl.cadcc.ramitos.repository.CourseEnrollmentRepository
 import doobie.Transactor
 import doobie.syntax.all.*
 import smithy4s.time.Timestamp
 
-class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using session: Ask[F, Session], reviewRepository: ReviewRepository) extends ReviewService[F] {
+class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa, CourseEnrollmentRepository as enrollRepository}](using session: Ask[F, Session], reviewRepository: ReviewRepository) extends ReviewService[F] {
     private def modelToSchema(m: ModelReview): Review =
         Review(
             id = m.id,
@@ -60,6 +61,13 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using session:
     override def createReview(course_code: String, stats: ReviewStats, tags: List[String], comments: Option[String]): F[Review] =
         for {
             session <- session.ask
+            isEnrolled <- session.account.mufasaId match
+                case Some(id) =>
+                    enrollRepository.getEnrollmentsFor(id, course_code)
+                        .map(!_.isEmpty)
+                        .transact(xa)
+                case None => true.pure
+            _ <- if !isEnrolled then F.raiseError(Exception("nao nao")) else F.unit
             review <-
                 reviewRepository
                     .create(
