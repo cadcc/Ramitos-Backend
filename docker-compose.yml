@@ -1,0 +1,91 @@
+# Local Dev Container
+name: ramitos-local
+
+services:
+  db:
+    image: postgres:18
+    ports:
+      - "5432"
+    environment:
+      POSTGRES_USER: desarrollo
+      POSTGRES_PASSWORD: desarroll0
+      POSTGRES_DB: ramitos
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U desarrollo -d ramitos"]
+      interval: 10s 
+      timeout: 5s
+      retries: 5
+    networks:
+      - ramitos
+
+  migration:
+    image: ghcr.io/amacneil/dbmate
+    command: migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - "./migrations:/opt:z"
+    environment:
+      DATABASE_URL: "postgres://desarrollo:desarroll0@db:5432/ramitos?sslmode=disable"
+      DBMATE_MIGRATIONS_DIR: "/opt"
+      DBMATE_NO_DUMP_SCHEMA: "TRUE"
+      DBMATE_WAIT: "TRUE"
+      DBMATE_STRICT: "TRUE"
+    networks:
+      - ramitos
+
+  db-inserts:
+    image: postgres:18
+    restart: no
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    entrypoint: ["bash", "/scripts/restore-db.sh"]
+    environment:
+      PGHOST: db
+      PGUSER: desarrollo
+      PGPASSWORD: desarroll0
+      TARGET_DB: ramitos
+      DUMP_FILE: /exports/inserts.dump   # default: newest .dump
+    volumes:
+      - ./scripts/dev-restore.sh:/scripts/restore-db.sh:z
+      - ./.docker/inserts.dump:/exports/inserts.dump:z
+    networks:
+      - ramitos
+
+  ramitos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db-inserts:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./.docker/ramitos.conf:/opt/ramitos.conf:z
+    environment:
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 8000
+      BASE_URI: "http://localhost:8000/"
+      BCRYPT_PEPPER: ""
+      DB_HOST: db
+      DB_USER: desarrollo
+      DB_PASS: desarroll0
+      PORTAL_DCC_BASE_URL: "about:blank"
+      PORTAL_DCC_APP_ID: ""
+      PORTAL_DCC_SECRET_KEY: ""
+      MUFASA_BASE_URL: ""
+      MUFASA_TOKEN: ""
+      SECRET_KEY: "mish123"
+      
+    networks:
+      - ramitos
+
+networks:
+  ramitos:
