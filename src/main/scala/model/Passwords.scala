@@ -1,6 +1,6 @@
 package cl.cadcc.ramitos.model
 
-import java.time.LocalDateTime
+import java.time.Instant
 import doobie.{TableDefinition, Column, ConnectionIO}
 import doobie.syntax.all._
 import doobie.postgres.implicits._
@@ -21,8 +21,8 @@ case class Password(
     username: String,
     secret: String,
     accountId: Int,
-    createdAt: LocalDateTime,
-    updatedAt: LocalDateTime
+    createdAt: Instant,
+    updatedAt: Instant
 ) derives Read, Write
 
 object Password {
@@ -34,8 +34,8 @@ object Password {
         val username: Column[String] = Column("username")
         val secret: Column[String] = Column("secret")
         val accountId: Column[Int] = Column("account_id")
-        val createdAt: Column[LocalDateTime] = Column("created_at")
-        val updatedAt: Column[LocalDateTime] = Column("updated_at")
+        val createdAt: Column[Instant] = Column("created_at")
+        val updatedAt: Column[Instant] = Column("updated_at")
 
         object all extends WithSQLDefinition[Password](Composite((
             username.sqlDef,

@@ -3,7 +3,7 @@ package cl.cadcc.ramitos.repository
 import doobie.syntax.all._, doobie._
 import cats._, cats.syntax.all._
 import cl.cadcc.ramitos.model.Password
-import java.time.LocalDateTime
+import java.time.Instant
 import scala.collection.mutable.ListBuffer
 import cats.data.NonEmptyVector
 import scala.language.implicitConversions
@@ -22,7 +22,7 @@ object PasswordRepository {
             .query[Password]
             .option
 
-    def updateByUsername(username: String, secret: Option[String], updatedAt: LocalDateTime): ConnectionIO[Password] =
+    def updateByUsername(username: String, secret: Option[String], updatedAt: Instant): ConnectionIO[Password] =
         val upds: ListBuffer[(Fragment, Fragment)] = ListBuffer()
         secret match
             case Some(value) => upds += Table.secret --> value
@@ -39,7 +39,7 @@ object PasswordRepository {
                 case None => MonadThrow[ConnectionIO].raiseError(new EntityNotFoundException(s"No credentials found for username '$username'."))
             }
 
-    def updateByAccountId(accountId: Int, username: Option[String], secret: Option[String], updatedAt: LocalDateTime): ConnectionIO[Password] =
+    def updateByAccountId(accountId: Int, username: Option[String], secret: Option[String], updatedAt: Instant): ConnectionIO[Password] =
         val upds: ListBuffer[(Fragment, Fragment)] = ListBuffer()
 
         username match
