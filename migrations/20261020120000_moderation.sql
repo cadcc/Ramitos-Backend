@@ -21,12 +21,12 @@ CREATE TABLE IF NOT EXISTS moderation_log(
 CREATE INDEX IF NOT EXISTS moderation_log_review ON moderation_log(target_review_id, created_at) WHERE target_review_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS moderation_log_actor ON moderation_log(actor_account_id, created_at);
 
--- Hide entry that put the comment in its current hidden state; NULL means visible.
-ALTER TABLE reviews ADD COLUMN IF NOT EXISTS comment_hidden_by INTEGER UNIQUE REFERENCES moderation_log(id);
+-- NULL means the comment is visible.
+ALTER TABLE reviews ADD COLUMN IF NOT EXISTS comment_hide_log_id INTEGER UNIQUE REFERENCES moderation_log(id);
 ALTER TABLE reviews ADD CONSTRAINT reviews_hidden_needs_comment
-    CHECK (comment_hidden_by IS NULL OR comments IS NOT NULL);
+    CHECK (comment_hide_log_id IS NULL OR comments IS NOT NULL);
 
 -- migrate:down
-ALTER TABLE reviews DROP COLUMN IF EXISTS comment_hidden_by;
+ALTER TABLE reviews DROP COLUMN IF EXISTS comment_hide_log_id;
 DROP TABLE IF EXISTS moderation_log;
 DROP TYPE IF EXISTS moderation_action;

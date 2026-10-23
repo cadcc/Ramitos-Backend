@@ -16,7 +16,7 @@ case class Review(
     tags: Vector[String],
     createdAt: Instant,
     /** Moderation log entry that hid the comment; None when visible. */
-    commentHiddenBy: Option[Int]
+    commentHideLogId: Option[Int]
 )
 
 object Review {
@@ -37,7 +37,7 @@ object Review {
         dificultad: Option[Byte],
         tags: Vector[String],
         createdAt: Instant,
-        commentHiddenBy: Option[Int]) =
+        commentHideLogId: Option[Int]) =
         Review(
             id,
             accountId,
@@ -52,7 +52,7 @@ object Review {
             ),
             tags,
             createdAt,
-            commentHiddenBy
+            commentHideLogId
         )
 
     private def ofModel(m: Review) =
@@ -60,7 +60,7 @@ object Review {
             m.id, m.accountId, m.courseCode, m.comments,
             m.stats(Stat.DOCENCIA), m.stats(Stat.VIBES),
             m.stats(Stat.RELEVANCIA), m.stats(Stat.CARGA),
-            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt, m.commentHiddenBy
+            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt, m.commentHideLogId
         )
     
     object Table extends TableDefinition("reviews") {
@@ -78,7 +78,7 @@ object Review {
         val dificultad: Column[Option[Byte]] = Column("dificultad")
         val tags: Column[Vector[String]] = Column("tags")
         val createdAt: Column[Instant] = Column("created_at")
-        val commentHiddenBy: Column[Option[Int]] = Column("comment_hidden_by")
+        val commentHideLogId: Column[Option[Int]] = Column("comment_hide_log_id")
 
         def stat(stat: Stat): Column[Option[Byte]] =
             stat match {
@@ -101,7 +101,7 @@ object Review {
             dificultad.sqlDef,
             tags.sqlDef,
             createdAt.sqlDef,
-            commentHiddenBy.sqlDef
+            commentHideLogId.sqlDef
         ))(toModel)(ofModel)) with TableDefinition.RowHelpers[Review](this)
     }
 }

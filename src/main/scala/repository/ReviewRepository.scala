@@ -72,7 +72,7 @@ object ReviewRepository {
                 accountId.map(Table.accountId === _),
                 after.map(Table.id > _),
                 withComments.map {
-                    case true => fr"${Table.comments.isNotNull} AND ${Table.commentHiddenBy.isNull}"
+                    case true => fr"${Table.comments.isNotNull} AND ${Table.commentHideLogId.isNull}"
                     case false => Table.comments.isNull
                 },
             )
@@ -84,13 +84,13 @@ object ReviewRepository {
 
         // Conditional updates: the WHERE clause makes double hide / unhide a no-op even under concurrency.
         def hideComment(id: Int, logId: Int): ConnectionIO[Boolean] =
-            sql"""${Table.updateTable(Table.commentHiddenBy --> Some(logId))}
-                WHERE ${Table.id === id} AND ${Table.commentHiddenBy.isNull} AND ${Table.comments.isNotNull}"""
+            sql"""${Table.updateTable(Table.commentHideLogId --> Some(logId))}
+                WHERE ${Table.id === id} AND ${Table.commentHideLogId.isNull} AND ${Table.comments.isNotNull}"""
                 .update.run.map(_ == 1)
 
         def unhideComment(id: Int): ConnectionIO[Boolean] =
-            sql"""${Table.updateTable(Table.commentHiddenBy --> (None: Option[Int]))}
-                WHERE ${Table.id === id} AND ${Table.commentHiddenBy.isNotNull}"""
+            sql"""${Table.updateTable(Table.commentHideLogId --> (None: Option[Int]))}
+                WHERE ${Table.id === id} AND ${Table.commentHideLogId.isNotNull}"""
                 .update.run.map(_ == 1)
 
         /**

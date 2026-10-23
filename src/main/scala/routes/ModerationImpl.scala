@@ -68,7 +68,7 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
                     reason,
                     Json.obj(
                         "course_code" -> review.courseCode.asJson,
-                        "previous_hidden_by" -> review.commentHiddenBy.asJson,
+                        "previous_hide_log_id" -> review.commentHideLogId.asJson,
                     ),
                 )
                 changed <- change(entry.id)

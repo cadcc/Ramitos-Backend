@@ -25,7 +25,7 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa, CourseEnrollmen
             account_id = m.accountId,
             course_code = m.courseCode,
             comments = m.comments,
-            comment_hidden = m.commentHiddenBy.isDefined,
+            comment_hidden = m.commentHideLogId.isDefined,
             stats = statsToSchema(m.stats),
             tags = m.tags.toList,
             created_at = Timestamp.fromInstant(m.createdAt)
