@@ -4,8 +4,10 @@ import cats.syntax.all.*
 import doobie.*
 import doobie.postgres.implicits.*
 import io.circe.{Codec, Json}
+import io.circe.syntax.*
 
 import java.time.Instant
+import scala.compiletime.deferred
 import implicits.given
 import cl.cadcc.ramitos.model.implicits.{jsonbGet, jsonbPut}
 
@@ -31,7 +33,7 @@ sealed trait ModerationActionType {
     def targetColumns(target: Target): Option[Int]
     def targetOfColumns(reviewId: Option[Int]): Option[Target]
 
-    def detailsCodec: Codec[Details]
+    given detailsCodec: Codec[Details] = deferred
 }
 
 object ModerationActionType {
@@ -41,8 +43,6 @@ object ModerationActionType {
 
         def targetColumns(reviewId: Int): Option[Int] = reviewId.some
         def targetOfColumns(reviewId: Option[Int]): Option[Int] = reviewId
-
-        def detailsCodec: Codec[ReviewCommentDetails] = ReviewCommentDetails.codec
     }
 
     case object REVIEW_COMMENT_HIDE extends OnReviewComment {
@@ -85,7 +85,8 @@ object ModerationLogEntry {
         targetReviewId: Option[Int],
         reason: String,
         details: Json,
-        createdAt: Instant) =
+        createdAt: Instant) = {
+        import action.given
         ModerationLogEntry(
             id,
             actorAccountId,
@@ -93,21 +94,24 @@ object ModerationLogEntry {
             // Guaranteed by the moderation_log_one_target CHECK constraint.
             action.targetOfColumns(targetReviewId).getOrElse(
                 throw IllegalStateException(s"moderation_log row $id has no target for ${action.s}")),
-            action.detailsCodec.decodeJson(details).fold(
+            details.as[action.Details].fold(
                 err => throw IllegalStateException(s"moderation_log row $id has invalid details: ${err.show}"),
                 identity),
             reason,
             createdAt
         )
+    }
 
-    private def ofModel(m: ModerationLogEntry): Tup =
+    private def ofModel(m: ModerationLogEntry): Tup = {
+        import m.action.given
         (
             m.id, m.actorAccountId, m.action,
             m.action.targetColumns(m.target),
             m.reason,
-            m.action.detailsCodec(m.details),
+            m.details.asJson,
             m.createdAt
         )
+    }
 
     object Table extends TableDefinition("moderation_log") {
         lazy val columns = Composite(all)

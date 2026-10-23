@@ -15,6 +15,7 @@ import cl.cadcc.ramitos.utils.extensions.*
 import doobie.{ConnectionIO, Transactor}
 import doobie.syntax.all.*
 import io.circe.Json
+import io.circe.syntax.*
 import smithy4s.Document
 import smithy4s.time.Timestamp
 
@@ -47,16 +48,18 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
             case None => throw IllegalStateException(s"moderation_log row ${m.id} has no target")
         }
 
-    private def modelToSchema(m: ModerationLogEntry): ModerationAction =
+    private def modelToSchema(m: ModerationLogEntry): ModerationAction = {
+        import m.action.given
         ModerationAction(
             id = m.id,
             actor_account_id = m.actorAccountId,
             action = actionToSchema(m.action),
             target = targetToSchema(m),
             reason = m.reason,
-            details = jsonToDocument(m.action.detailsCodec(m.details)),
+            details = jsonToDocument(m.details.asJson),
             created_at = Timestamp.fromInstant(m.createdAt),
         )
+    }
 
     /**
      * Records `action` and applies `change` to the review in one transaction.

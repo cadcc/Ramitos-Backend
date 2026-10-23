@@ -7,6 +7,7 @@ import cl.cadcc.ramitos.model.implicits.{jsonbGet, jsonbPut}
 import doobie.*
 import doobie.syntax.all.*
 import fs2.Stream
+import io.circe.syntax.*
 
 import scala.language.implicitConversions
 
@@ -17,18 +18,20 @@ object ModerationLogRepository {
         target: action.Target,
         reason: String,
         details: action.Details,
-    ): ConnectionIO[ModerationLogEntry] =
+    ): ConnectionIO[ModerationLogEntry] = {
+        import action.given
         Table.insertInto(
             NonEmptySeq.of(
                 Table.actorAccountId --> actorAccountId,
                 Table.action --> action,
                 Table.targetReviewId --> action.targetColumns(target),
                 Table.reason --> reason,
-                Table.details --> action.detailsCodec(details),
+                Table.details --> details.asJson,
             )
         )
             .update
             .withUniqueGeneratedKeys[ModerationLogEntry](Table.columnNames*)
+    }
 
     /** `after` excludes the entry with that id and everything before it in `order`. */
     def list(
