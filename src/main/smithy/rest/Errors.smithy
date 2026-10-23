@@ -66,3 +66,12 @@ structure WorkflowTimeout {
     @required
     retry: String
 }
+
+/// The target is not in a state the moderation action can be applied to,
+/// e.g. hiding a comment that is already hidden or empty.
+@error("client")
+@httpError(409)
+structure InvalidModerationState {
+    @required
+    reason: String
+}

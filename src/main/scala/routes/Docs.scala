@@ -3,7 +3,7 @@ package cl.cadcc.ramitos.routes
 import cats.effect.Sync
 import cl.cadcc.ramitos.RamitosContext
 import cl.cadcc.ramitos.RamitosContext.given
-import cl.cadcc.ramitos.schema.{AccountService, AnonymousReviewService, AuthenticationService, CourseService, ReviewService, WoofService}
+import cl.cadcc.ramitos.schema.{AccountService, AnonymousReviewService, AuthenticationService, CourseService, ModerationService, ReviewService, WoofService}
 import org.http4s.HttpRoutes
 
 object Docs {
@@ -12,6 +12,7 @@ object Docs {
         AnonymousReviewService,
         AuthenticationService,
         CourseService,
+        ModerationService,
         ReviewService,
         WoofService,
     )

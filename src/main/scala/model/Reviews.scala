@@ -14,11 +14,13 @@ case class Review(
     comments: Option[String],
     stats: Map[Stat, Option[Byte]],
     tags: Vector[String],
-    createdAt: Instant
+    createdAt: Instant,
+    /** Moderation log entry that hid the comment; None when visible. */
+    commentHiddenBy: Option[Int]
 )
 
 object Review {
-    private type Tup = (Int, Int, String, Option[String], Option[Byte], Option[Byte], Option[Byte], Option[Byte], Option[Byte], Vector[String], Instant)
+    private type Tup = (Int, Int, String, Option[String], Option[Byte], Option[Byte], Option[Byte], Option[Byte], Option[Byte], Vector[String], Instant, Option[Int])
 
     given Read[Review] = Read[Tup].map(toModel.tupled)
     given Write[Review] = Write[Tup].contramap(ofModel)
@@ -34,7 +36,8 @@ object Review {
         carga: Option[Byte],
         dificultad: Option[Byte],
         tags: Vector[String],
-        createdAt: Instant) =
+        createdAt: Instant,
+        commentHiddenBy: Option[Int]) =
         Review(
             id,
             accountId,
@@ -48,7 +51,8 @@ object Review {
                 Stat.DIFICULTAD -> dificultad,
             ),
             tags,
-            createdAt
+            createdAt,
+            commentHiddenBy
         )
 
     private def ofModel(m: Review) =
@@ -56,7 +60,7 @@ object Review {
             m.id, m.accountId, m.courseCode, m.comments,
             m.stats(Stat.DOCENCIA), m.stats(Stat.VIBES),
             m.stats(Stat.RELEVANCIA), m.stats(Stat.CARGA),
-            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt
+            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt, m.commentHiddenBy
         )
     
     object Table extends TableDefinition("reviews") {
@@ -74,6 +78,7 @@ object Review {
         val dificultad: Column[Option[Byte]] = Column("dificultad")
         val tags: Column[Vector[String]] = Column("tags")
         val createdAt: Column[Instant] = Column("created_at")
+        val commentHiddenBy: Column[Option[Int]] = Column("comment_hidden_by")
 
         def stat(stat: Stat): Column[Option[Byte]] =
             stat match {
@@ -95,7 +100,8 @@ object Review {
             carga.sqlDef,
             dificultad.sqlDef,
             tags.sqlDef,
-            createdAt.sqlDef
+            createdAt.sqlDef,
+            commentHiddenBy.sqlDef
         ))(toModel)(ofModel)) with TableDefinition.RowHelpers[Review](this)
     }
 }

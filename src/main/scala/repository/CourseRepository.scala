@@ -37,6 +37,8 @@ trait CourseRepositoryOps {
     def list(limit: Long, codes: Option[Seq[String]] = None, from: Option[String] = None): Stream[ConnectionIO, Course]
     def create(code: String, mufasaId: Int, name: String): ConnectionIO[Course]
     def updateStats(code: String, stats: Map[Stat, CourseStat], tagStats: Map[String, CourseStat], hasComment: Boolean): ConnectionIO[Boolean]
+    /** Adds `delta` to the visible comment count. */
+    def adjustCommentCount(code: String, delta: Int): ConnectionIO[Boolean]
 }
 
 trait CourseMufasaPatch[F[_]] {
@@ -197,6 +199,19 @@ object CourseRepository {
                             Table.tagStats --> tagStats,
                             Table.totalReviews --> (Table.totalReviews + 1),
                             Table.commentReviews --> (if hasComment then Table.commentReviews + 1 else Table.commentReviews)
+                        )
+                    } WHERE ${Table.code === code}"
+                ans <- sql.update.run.map(_ == 1)
+            } yield ans
+
+        def adjustCommentCount(code: String, delta: Int): ConnectionIO[Boolean] =
+            for {
+                now <- ConnF.realTimeInstant
+                sql =
+                    sql"${
+                        Table.updateTable(
+                            Table.updatedAt --> now,
+                            Table.commentReviews --> (Table.commentReviews + delta)
                         )
                     } WHERE ${Table.code === code}"
                 ans <- sql.update.run.map(_ == 1)

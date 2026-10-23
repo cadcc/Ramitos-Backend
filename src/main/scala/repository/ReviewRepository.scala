@@ -12,7 +12,20 @@ import scala.language.implicitConversions
 
 trait ReviewRepository {
     def getById(id: Int): ConnectionIO[Option[Review]]
+    /**
+     * @param withComments `Some(true)` keeps only reviews with a visible (non-hidden) comment,
+     *                     `Some(false)` only reviews without a comment.
+     */
     def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, withComments: Option[Boolean] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
+
+    /**
+     * Marks the comment as hidden by moderation log entry `logId`.
+     * Returns false when the review has no comment or it is already hidden.
+     */
+    def hideComment(id: Int, logId: Int): ConnectionIO[Boolean]
+
+    /** Returns false when the comment is not hidden. */
+    def unhideComment(id: Int): ConnectionIO[Boolean]
 
     /**
      * This method locks on the course row.
@@ -59,7 +72,7 @@ object ReviewRepository {
                 accountId.map(Table.accountId === _),
                 after.map(Table.id > _),
                 withComments.map {
-                    case true => Table.comments.isNotNull
+                    case true => fr"${Table.comments.isNotNull} AND ${Table.commentHiddenBy.isNull}"
                     case false => Table.comments.isNull
                 },
             )
@@ -68,6 +81,17 @@ object ReviewRepository {
                 fr"ORDER BY ${Table.createdAt} ASC"
             sql.query[Review].stream
         }
+
+        // Conditional updates: the WHERE clause makes double hide / unhide a no-op even under concurrency.
+        def hideComment(id: Int, logId: Int): ConnectionIO[Boolean] =
+            sql"""${Table.updateTable(Table.commentHiddenBy --> Some(logId))}
+                WHERE ${Table.id === id} AND ${Table.commentHiddenBy.isNull} AND ${Table.comments.isNotNull}"""
+                .update.run.map(_ == 1)
+
+        def unhideComment(id: Int): ConnectionIO[Boolean] =
+            sql"""${Table.updateTable(Table.commentHiddenBy --> (None: Option[Int]))}
+                WHERE ${Table.id === id} AND ${Table.commentHiddenBy.isNotNull}"""
+                .update.run.map(_ == 1)
 
         /**
          * This method locks on the course row.
