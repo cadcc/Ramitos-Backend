@@ -86,8 +86,8 @@ structure Review {
     comments: String
 
     /// True when a moderator hid the comment from public listings.
-    @required
-    comment_hidden: Boolean = false
+    /// Only present for the author of the review and for moderators.
+    comment_hidden: Boolean
 
     @required
     stats: ReviewStats
