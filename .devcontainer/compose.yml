@@ -1,11 +1,46 @@
+# Layered on top of ../docker-compose.yml, so db, migration, db-inserts and db-seed are the same
+# services as the root stack. Paths are relative to the first compose file, i.e. the repo root.
+name: ramitos-devcontainer
+
 services:
-  db:
-    image: postgres:18
-    ports:
-      - "5432:5432"      
+  dev:
+    # Explicit localhost/ name so podman tags the build the same way the devcontainer CLI looks it up
+    image: localhost/ramitos-devcontainer-dev
+    build:
+      context: .devcontainer
+      dockerfile: Dockerfile
+    command: sleep infinity
+    depends_on:
+      db:
+        condition: service_healthy
+      db-seed:
+        condition: service_completed_successfully
+    volumes:
+      - .:/workspaces/ramitos-back:cached,z
     environment:
-      POSTGRES_USER: desarrollo
-      POSTGRES_PASSWORD: desarroll0
-      POSTGRES_DB: ramitos
+      # App, same values as the `ramitos` service
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: 8000
+      BASE_URI: "http://localhost:8000/"
+      BCRYPT_PEPPER: ""
+      DB_HOST: db
+      DB_USER: desarrollo
+      DB_PASS: desarroll0
+      PORTAL_DCC_BASE_URL: "about:blank"
+      PORTAL_DCC_APP_ID: ""
+      PORTAL_DCC_SECRET_KEY: ""
+      MUFASA_BASE_URL: ""
+      MUFASA_TOKEN: ""
+      SECRET_KEY: "mish123"
+      # psql / pg_restore
+      PGHOST: db
+      PGUSER: desarrollo
+      PGPASSWORD: desarroll0
+      PGDATABASE: ramitos
+      # dbmate
+      DATABASE_URL: "postgres://desarrollo:desarroll0@db:5432/ramitos?sslmode=disable"
+      DBMATE_MIGRATIONS_DIR: "/workspaces/ramitos-back/migrations"
+      DBMATE_NO_DUMP_SCHEMA: "TRUE"
+      DBMATE_STRICT: "TRUE"
     networks:
-      - default
+      - ramitos

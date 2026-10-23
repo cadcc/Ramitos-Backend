@@ -13,7 +13,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U desarrollo -d ramitos"]
       interval: 10s 
-      timeout: 5s
+      timeout: 10s
       retries: 5
     networks:
       - ramitos
@@ -37,7 +37,6 @@ services:
 
   db-inserts:
     image: postgres:18
-    restart: no
     depends_on:
       migration:
         condition: service_completed_successfully
@@ -56,12 +55,28 @@ services:
     networks:
       - ramitos
 
+  db-seed:
+    image: postgres:18
+    depends_on:
+      db-inserts:
+        condition: service_completed_successfully
+    command: ["psql", "-X", "-q", "-f", "/scripts/dev-seed-accounts.sql"]
+    environment:
+      PGHOST: db
+      PGUSER: desarrollo
+      PGPASSWORD: desarroll0
+      PGDATABASE: ramitos
+    volumes:
+      - ./scripts/dev-seed-accounts.sql:/scripts/dev-seed-accounts.sql:z
+    networks:
+      - ramitos
+
   ramitos:
     build:
       context: .
       dockerfile: Dockerfile
     depends_on:
-      db-inserts:
+      db-seed:
         condition: service_completed_successfully
       db:
         condition: service_healthy
