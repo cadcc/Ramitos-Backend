@@ -11,9 +11,10 @@ import java.time.Instant
 import implicits.given
 import cl.cadcc.ramitos.model.implicits.{jsonbGet, jsonbPut}
 
-enum ModerationActionType(val s: String):
+enum ModerationActionType(val s: String) {
     case REVIEW_COMMENT_HIDE extends ModerationActionType("review_comment_hide")
     case REVIEW_COMMENT_UNHIDE extends ModerationActionType("review_comment_unhide")
+}
 
 object ModerationActionType {
     given Meta[ModerationActionType] = pgEnumStringOpt[ModerationActionType]("moderation_action", ofString, _.s)
@@ -31,8 +32,9 @@ given moderationActionConvert: SchemaModelConvert[ModerationActionType, SchemaAc
 }
 
 /** Target of a moderation action. Each case maps to one `target_*_id` column. */
-enum ModerationTarget:
+enum ModerationTarget {
     case Review(id: Int)
+}
 
 object ModerationTarget {
     /** Values for the `target_*_id` columns, in table order. Exactly one is defined. */
@@ -89,6 +91,7 @@ object ModerationLogEntry {
         (m.id, m.actorAccountId, m.action, ModerationTarget.columns(m.target), m.reason, m.details, m.createdAt)
 
     object Table extends TableDefinition("moderation_log") {
+        lazy val columns = Composite(all)
         lazy val columnNames = all.columns.map(_.rawName).toVector
 
         val id: Column[Int] = Column("id")

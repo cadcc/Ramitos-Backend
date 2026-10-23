@@ -60,7 +60,8 @@ object Review {
             m.id, m.accountId, m.courseCode, m.comments,
             m.stats(Stat.DOCENCIA), m.stats(Stat.VIBES),
             m.stats(Stat.RELEVANCIA), m.stats(Stat.CARGA),
-            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt, m.commentHideLogId
+            m.stats(Stat.DIFICULTAD), m.tags, m.createdAt,
+            m.commentHideLogId
         )
     
     object Table extends TableDefinition("reviews") {
