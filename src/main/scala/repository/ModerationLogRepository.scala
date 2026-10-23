@@ -1,33 +1,30 @@
 package cl.cadcc.ramitos.repository
 
 import cats.data.NonEmptySeq
-import cl.cadcc.ramitos.model.{ModerationActionType, ModerationLogEntry, ModerationTarget}
+import cl.cadcc.ramitos.model.{ModerationActionType, ModerationLogEntry}
 import cl.cadcc.ramitos.model.implicits.given
 import cl.cadcc.ramitos.model.implicits.{jsonbGet, jsonbPut}
 import doobie.*
 import doobie.syntax.all.*
 import fs2.Stream
-import io.circe.Json
 
 import scala.language.implicitConversions
 
 object ModerationLogRepository {
     val Table = ModerationLogEntry.Table
 
-    def record(
-        actorAccountId: Int,
-        action: ModerationActionType,
-        target: ModerationTarget,
+    def record(actorAccountId: Int, action: ModerationActionType)(
+        target: action.Target,
         reason: String,
-        details: Json,
+        details: action.Details,
     ): ConnectionIO[ModerationLogEntry] =
         Table.insertInto(
             NonEmptySeq.of(
                 Table.actorAccountId --> actorAccountId,
                 Table.action --> action,
-                Table.targetReviewId --> ModerationTarget.columns(target),
+                Table.targetReviewId --> action.targetColumns(target),
                 Table.reason --> reason,
-                Table.details --> details,
+                Table.details --> action.detailsCodec(details),
             )
         )
             .update

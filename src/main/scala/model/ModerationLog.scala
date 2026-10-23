@@ -3,20 +3,56 @@ package cl.cadcc.ramitos.model
 import cats.syntax.all.*
 import doobie.*
 import doobie.postgres.implicits.*
-import io.circe.Json
-import cl.cadcc.ramitos.schema.{ModerationActionType as SchemaActionType, ModerationTarget as SchemaTarget}
-import cl.cadcc.ramitos.utils.Shapeless.SchemaModelConvert
+import io.circe.{Codec, Json}
 
 import java.time.Instant
 import implicits.given
 import cl.cadcc.ramitos.model.implicits.{jsonbGet, jsonbPut}
 
-enum ModerationActionType(val s: String) {
-    case REVIEW_COMMENT_HIDE extends ModerationActionType("review_comment_hide")
-    case REVIEW_COMMENT_UNHIDE extends ModerationActionType("review_comment_unhide")
+/** Details of the review comment actions: a snapshot of the review before the action. */
+case class ReviewCommentDetails(courseCode: String, previousHideLogId: Option[Int])
+
+object ReviewCommentDetails {
+    given codec: Codec[ReviewCommentDetails] =
+        Codec.forProduct2("course_code", "previous_hide_log_id")(ReviewCommentDetails.apply)(d => (d.courseCode, d.previousHideLogId))
+}
+
+/**
+ * Kind of moderation action. Each kind fixes the type of its target (stored in one of the
+ * `target_*_id` columns) and the type of its `details` JSONB payload.
+ */
+sealed trait ModerationActionType {
+    type Target
+    type Details
+
+    def s: String
+
+    /** Values for the `target_*_id` columns, in table order. Exactly one is defined. */
+    def targetColumns(target: Target): Option[Int]
+    def targetOfColumns(reviewId: Option[Int]): Option[Target]
+
+    def detailsCodec: Codec[Details]
 }
 
 object ModerationActionType {
+    sealed trait OnReviewComment extends ModerationActionType {
+        type Target = Int
+        type Details = ReviewCommentDetails
+
+        def targetColumns(reviewId: Int): Option[Int] = reviewId.some
+        def targetOfColumns(reviewId: Option[Int]): Option[Int] = reviewId
+
+        def detailsCodec: Codec[ReviewCommentDetails] = ReviewCommentDetails.codec
+    }
+
+    case object REVIEW_COMMENT_HIDE extends OnReviewComment {
+        val s = "review_comment_hide"
+    }
+
+    case object REVIEW_COMMENT_UNHIDE extends OnReviewComment {
+        val s = "review_comment_unhide"
+    }
+
     given Meta[ModerationActionType] = pgEnumStringOpt[ModerationActionType]("moderation_action", ofString, _.s)
 
     def ofString(s: String): Option[ModerationActionType] = s match {
@@ -26,39 +62,13 @@ object ModerationActionType {
     }
 }
 
-given moderationActionConvert: SchemaModelConvert[ModerationActionType, SchemaActionType] = SchemaModelConvert.instance {
-    case ModerationActionType.REVIEW_COMMENT_HIDE => SchemaActionType.REVIEW_COMMENT_HIDE
-    case ModerationActionType.REVIEW_COMMENT_UNHIDE => SchemaActionType.REVIEW_COMMENT_UNHIDE
-}
-
-/** Target of a moderation action. Each case maps to one `target_*_id` column. */
-enum ModerationTarget {
-    case Review(id: Int)
-}
-
-object ModerationTarget {
-    /** Values for the `target_*_id` columns, in table order. Exactly one is defined. */
-    def columns(t: ModerationTarget): Option[Int] = t match {
-        case Review(id) => id.some
-    }
-
-    def ofColumns(reviewId: Option[Int]): Option[ModerationTarget] = reviewId match {
-        case Some(id) => Review(id).some
-        case None => None
-    }
-}
-
-given moderationTargetConvert: SchemaModelConvert[ModerationTarget, SchemaTarget] = SchemaModelConvert.instance {
-    case ModerationTarget.Review(id) => SchemaTarget.review(id)
-}
-
 case class ModerationLogEntry(
     id: Int,
     actorAccountId: Int,
     action: ModerationActionType,
-    target: ModerationTarget,
+    target: action.Target,
+    details: action.Details,
     reason: String,
-    details: Json,
     createdAt: Instant
 )
 
@@ -67,6 +77,7 @@ object ModerationLogEntry {
 
     given Read[ModerationLogEntry] = Read[Tup].map(toModel.tupled)
 
+    // `action`, `target_review_id` and `details` are decoded together: the action decides the other two types.
     private def toModel(
         id: Int,
         actorAccountId: Int,
@@ -80,15 +91,23 @@ object ModerationLogEntry {
             actorAccountId,
             action,
             // Guaranteed by the moderation_log_one_target CHECK constraint.
-            ModerationTarget.ofColumns(targetReviewId).getOrElse(
-                throw IllegalStateException(s"moderation_log row $id has no target")),
+            action.targetOfColumns(targetReviewId).getOrElse(
+                throw IllegalStateException(s"moderation_log row $id has no target for ${action.s}")),
+            action.detailsCodec.decodeJson(details).fold(
+                err => throw IllegalStateException(s"moderation_log row $id has invalid details: ${err.show}"),
+                identity),
             reason,
-            details,
             createdAt
         )
 
     private def ofModel(m: ModerationLogEntry): Tup =
-        (m.id, m.actorAccountId, m.action, ModerationTarget.columns(m.target), m.reason, m.details, m.createdAt)
+        (
+            m.id, m.actorAccountId, m.action,
+            m.action.targetColumns(m.target),
+            m.reason,
+            m.action.detailsCodec(m.details),
+            m.createdAt
+        )
 
     object Table extends TableDefinition("moderation_log") {
         lazy val columns = Composite(all)

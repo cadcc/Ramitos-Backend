@@ -6,15 +6,14 @@ import cats.effect.MonadCancelThrow
 import cats.mtl.Ask
 import cats.syntax.all.*
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
-import cl.cadcc.ramitos.model.{AccountRole, ModerationLogEntry, ModerationTarget, ModerationActionType as ModelActionType, given}
+import cl.cadcc.ramitos.model.{AccountRole, ModerationLogEntry, ReviewCommentDetails, ModerationActionType as ModelActionType}
 import cl.cadcc.ramitos.repository.{CourseRepository, ModerationLogRepository, ReviewRepository}
 import cl.cadcc.ramitos.routes.utils.*
-import cl.cadcc.ramitos.schema.{InvalidModerationState, ListModerationActionsOutput, ModerationAction, ModerationActionType, ModerationService, NotFound}
+import cl.cadcc.ramitos.schema.{InvalidModerationState, ListModerationActionsOutput, ModerationAction, ModerationActionType, ModerationService, ModerationTarget, NotFound}
 import cl.cadcc.ramitos.utils.extensions.*
 import doobie.{ConnectionIO, Transactor}
 import doobie.syntax.all.*
 import io.circe.Json
-import io.circe.syntax.*
 import smithy4s.Document
 import smithy4s.time.Timestamp
 
@@ -31,14 +30,30 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
             obj => Document.obj(obj.toList.map((k, v) => k -> jsonToDocument(v))*),
         )
 
+    private def actionToSchema(action: ModelActionType): ModerationActionType = action match {
+        case ModelActionType.REVIEW_COMMENT_HIDE => ModerationActionType.REVIEW_COMMENT_HIDE
+        case ModelActionType.REVIEW_COMMENT_UNHIDE => ModerationActionType.REVIEW_COMMENT_UNHIDE
+    }
+
+    private def actionToModel(action: ModerationActionType): ModelActionType = action match {
+        case ModerationActionType.REVIEW_COMMENT_HIDE => ModelActionType.REVIEW_COMMENT_HIDE
+        case ModerationActionType.REVIEW_COMMENT_UNHIDE => ModelActionType.REVIEW_COMMENT_UNHIDE
+    }
+
+    private def targetToSchema(m: ModerationLogEntry): ModerationTarget =
+        m.action.targetColumns(m.target) match {
+            case Some(reviewId) => ModerationTarget.review(reviewId)
+            case None => throw IllegalStateException(s"moderation_log row ${m.id} has no target")
+        }
+
     private def modelToSchema(m: ModerationLogEntry): ModerationAction =
         ModerationAction(
             id = m.id,
             actor_account_id = m.actorAccountId,
-            action = m.action.toSchema,
-            target = m.target.toSchema,
+            action = actionToSchema(m.action),
+            target = targetToSchema(m),
             reason = m.reason,
-            details = jsonToDocument(m.details),
+            details = jsonToDocument(m.action.detailsCodec(m.details)),
             created_at = Timestamp.fromInstant(m.createdAt),
         )
 
@@ -50,7 +65,7 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
     private def moderateReviewComment(
         reviewId: Int,
         reason: String,
-        action: ModelActionType,
+        action: ModelActionType.OnReviewComment,
         commentCountDelta: Int,
         invalidState: String,
     )(change: Int => ConnectionIO[Boolean]): F[ModerationAction] =
@@ -61,15 +76,10 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
                 review <- OptionT(reviewRepository.getById(reviewId)).getOrRaise(NotFound())
                 // Same lock order as ReviewRepository.create: course row first.
                 _ <- courseRepository.getByCode(review.courseCode, forUpdate = true)
-                entry <- ModerationLogRepository.record(
-                    session.account.id,
-                    action,
-                    ModerationTarget.Review(reviewId),
+                entry <- ModerationLogRepository.record(session.account.id, action)(
+                    reviewId,
                     reason,
-                    Json.obj(
-                        "course_code" -> review.courseCode.asJson,
-                        "previous_hide_log_id" -> review.commentHideLogId.asJson,
-                    ),
+                    ReviewCommentDetails(review.courseCode, review.commentHideLogId),
                 )
                 changed <- change(entry.id)
                 _ <- ConnIO.raiseUnless(changed)(InvalidModerationState(invalidState))
@@ -97,10 +107,7 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
                 limit,
                 reviewId = reviewId,
                 actorAccountId = actorId,
-                action = action.map {
-                    case ModerationActionType.REVIEW_COMMENT_HIDE => ModelActionType.REVIEW_COMMENT_HIDE
-                    case ModerationActionType.REVIEW_COMMENT_UNHIDE => ModelActionType.REVIEW_COMMENT_UNHIDE
-                },
+                action = action.map(actionToModel),
                 before = before,
             ).map(modelToSchema).compile.toList.transact(xa)
         } yield ListModerationActionsOutput(entries)
