@@ -16,9 +16,12 @@ package object repository {
                 case Some(v) => v
             }
         if actualFrags.isEmpty then fr""
-        else fr"WHERE" ++ NonEmptySeq.fromSeqUnsafe(actualFrags).reduceLeft { (l, r) =>
-            fr"$l AND $r"
-        }
+        else
+            val cond = NonEmptySeq.fromSeqUnsafe(actualFrags).reduceLeft { (l, r) =>
+                fr"$l AND $r"
+            }
+            // Interpolating through fr keeps the trailing space even for a single condition.
+            fr"WHERE $cond"
     }
 
     enum SqlOrder {

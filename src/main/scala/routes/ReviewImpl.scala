@@ -8,7 +8,7 @@ import cats.syntax.all.*
 import cats.effect.syntax.all.*
 import cl.cadcc.ramitos.utils.extensions.*
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
-import cl.cadcc.ramitos.model.{AccountRole, Stat, Review as ModelReview}
+import cl.cadcc.ramitos.model.{Account, AccountRole, Stat, Review as ModelReview}
 import cl.cadcc.ramitos.repository.ReviewRepository
 import cl.cadcc.ramitos.routes.utils.*
 import cl.cadcc.ramitos.schema
@@ -19,12 +19,14 @@ import doobie.syntax.all.*
 import smithy4s.time.Timestamp
 
 class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa, CourseEnrollmentRepository as enrollRepository}](using session: Ask[F, Session], reviewRepository: ReviewRepository) extends ReviewService[F] {
-    private def modelToSchema(m: ModelReview): Review =
+    /** `viewer` decides whether the moderation state is exposed: only to the author or a moderator. */
+    private def modelToSchema(viewer: Account)(m: ModelReview): Review =
         Review(
             id = m.id,
             account_id = m.accountId,
             course_code = m.courseCode,
             comments = m.comments,
+            comment_hidden = Option.when(viewer.id == m.accountId || AccountRole.MOD <= viewer.role)(m.commentHideLogId.isDefined),
             stats = statsToSchema(m.stats),
             tags = m.tags.toList,
             created_at = Timestamp.fromInstant(m.createdAt)
@@ -54,7 +56,7 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa, CourseEnrollmen
                 accountId = accountId,
                 after = after,
                 order = createdOrder.toModel,
-            ).map(modelToSchema).compile.toList.transact(xa)
+            ).map(modelToSchema(session.account)).compile.toList.transact(xa)
         } yield ListReviewsOutput(reviews)
 
     /** HTTP POST /api/reviews */
@@ -81,7 +83,7 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa, CourseEnrollmen
                         case doobie.postgres.sqlstate.class23.UNIQUE_VIOLATION =>
                             F.raiseError(DuplicatedEntity(Vector("course_code")))
                     }
-        } yield modelToSchema(review)
+        } yield modelToSchema(session.account)(review)
 
     /** HTTP GET /api/reviews/{reviewId} */
     override def getReview(reviewId: Int): F[Review] =
@@ -91,5 +93,5 @@ class ReviewImpl[F[_]: {MonadCancelThrow as F, Transactor as xa, CourseEnrollmen
                 OptionT(reviewRepository.getById(reviewId).transact(xa))
                     .getOrRaise(NotFound())
             _ <- F.raiseWhen(session.account.id != review.accountId)(InsufficientPermissions())
-        } yield modelToSchema(review)
+        } yield modelToSchema(session.account)(review)
 }

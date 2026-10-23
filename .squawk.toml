@@ -8,7 +8,11 @@ excluded_rules = [
   "ban-drop-column",
   "adding-not-nullable-field",
   "require-statement-timeout",
-  "require-lock-timeout"
+  "require-lock-timeout",
+  # migrations run off-hours with the application stopped, so table locks are fine
+  "disallowed-unique-constraint",
+  "adding-foreign-key-constraint",
+  "constraint-missing-not-valid"
 ]
 
 pg_version = "18.0"

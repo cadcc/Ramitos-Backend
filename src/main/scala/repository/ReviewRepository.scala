@@ -12,7 +12,21 @@ import scala.language.implicitConversions
 
 trait ReviewRepository {
     def getById(id: Int): ConnectionIO[Option[Review]]
-    def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, withComments: Option[Boolean] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
+    /**
+     * @param withComments `Some(true)` keeps only reviews with a comment, `Some(false)` only reviews without one.
+     * @param visible `Some(true)` keeps only reviews whose comment is not hidden by moderation,
+     *                `Some(false)` only reviews with a hidden comment.
+     */
+    def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, withComments: Option[Boolean] = None, visible: Option[Boolean] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
+
+    /**
+     * Marks the comment as hidden by moderation log entry `logId`.
+     * Returns false when the review has no comment or it is already hidden.
+     */
+    def hideComment(id: Int, logId: Int): ConnectionIO[Boolean]
+
+    /** Returns false when the comment is not hidden. */
+    def unhideComment(id: Int): ConnectionIO[Boolean]
 
     /**
      * This method locks on the course row.
@@ -51,6 +65,7 @@ object ReviewRepository {
             courseCode: Option[String] = None,
             accountId: Option[Int] = None,
             withComments: Option[Boolean] = None,
+            visible: Option[Boolean] = None,
             after: Option[Int] = None,
             order: SqlOrder = SqlOrder.DESCENDING
         ): Stream[ConnectionIO, Review] = {
@@ -62,12 +77,27 @@ object ReviewRepository {
                     case true => Table.comments.isNotNull
                     case false => Table.comments.isNull
                 },
+                visible.map {
+                    case true => Table.commentHideLogId.isNull
+                    case false => Table.commentHideLogId.isNotNull
+                },
             )
             val sql =
                 fr"SELECT ${Table.all} FROM $Table" ++ where ++
                 fr"ORDER BY ${Table.createdAt} ASC"
             sql.query[Review].stream
         }
+
+        // Conditional updates: the WHERE clause makes double hide / unhide a no-op even under concurrency.
+        def hideComment(id: Int, logId: Int): ConnectionIO[Boolean] =
+            sql"""${Table.updateTable(Table.commentHideLogId --> Some(logId))}
+                WHERE ${Table.id === id} AND ${Table.commentHideLogId.isNull} AND ${Table.comments.isNotNull}"""
+                .update.run.map(_ == 1)
+
+        def unhideComment(id: Int): ConnectionIO[Boolean] =
+            sql"""${Table.updateTable(Table.commentHideLogId --> (None: Option[Int]))}
+                WHERE ${Table.id === id} AND ${Table.commentHideLogId.isNotNull}"""
+                .update.run.map(_ == 1)
 
         /**
          * This method locks on the course row.

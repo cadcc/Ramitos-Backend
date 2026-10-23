@@ -40,6 +40,7 @@ def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
         cour <- makeRoutes(CourseImpl[IO])
         rew  <- makeRoutes(ReviewImpl[IO])
         arew <- makeRoutes(AnonymousReviewImpl[IO])
+        mod  <- makeRoutes(ModerationImpl[IO])
         docs <- Resource.pure(Docs.docs[IO])
     } yield woof
         <+> strm
@@ -48,4 +49,5 @@ def restRoutes(using ctx: RamitosContext[IO]): Resource[IO, HttpRoutes[IO]] =
         <+> cour
         <+> rew
         <+> arew
+        <+> mod
         <+> docs
