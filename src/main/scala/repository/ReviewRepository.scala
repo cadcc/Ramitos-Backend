@@ -13,10 +13,11 @@ import scala.language.implicitConversions
 trait ReviewRepository {
     def getById(id: Int): ConnectionIO[Option[Review]]
     /**
-     * @param withComments `Some(true)` keeps only reviews with a visible (non-hidden) comment,
-     *                     `Some(false)` only reviews without a comment.
+     * @param withComments `Some(true)` keeps only reviews with a comment, `Some(false)` only reviews without one.
+     * @param visible `Some(true)` keeps only reviews whose comment is not hidden by moderation,
+     *                `Some(false)` only reviews with a hidden comment.
      */
-    def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, withComments: Option[Boolean] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
+    def list(limit: Long, courseCode: Option[String] = None, accountId: Option[Int] = None, withComments: Option[Boolean] = None, visible: Option[Boolean] = None, after: Option[Int] = None, order: SqlOrder = SqlOrder.DESCENDING): Stream[ConnectionIO, Review]
 
     /**
      * Marks the comment as hidden by moderation log entry `logId`.
@@ -64,6 +65,7 @@ object ReviewRepository {
             courseCode: Option[String] = None,
             accountId: Option[Int] = None,
             withComments: Option[Boolean] = None,
+            visible: Option[Boolean] = None,
             after: Option[Int] = None,
             order: SqlOrder = SqlOrder.DESCENDING
         ): Stream[ConnectionIO, Review] = {
@@ -72,8 +74,12 @@ object ReviewRepository {
                 accountId.map(Table.accountId === _),
                 after.map(Table.id > _),
                 withComments.map {
-                    case true => fr"${Table.comments.isNotNull} AND ${Table.commentHideLogId.isNull}"
+                    case true => Table.comments.isNotNull
                     case false => Table.comments.isNull
+                },
+                visible.map {
+                    case true => Table.commentHideLogId.isNull
+                    case false => Table.commentHideLogId.isNotNull
                 },
             )
             val sql =

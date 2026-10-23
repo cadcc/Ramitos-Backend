@@ -25,7 +25,7 @@ class AnonymousReviewImpl[F[_]: {Concurrent as F, Transactor as xa}](using revie
     override def listCourseReviews(courseCode: String, limit: Long, after: Option[Int]): F[ListCourseReviewsOutput] =
         for {
             course <- OptionT(courseRepository.getByCode(courseCode).transact(xa)).getOrRaise(NotFound())
-            ans <- reviewRepository.list(limit, courseCode = courseCode.some, withComments = true.some, after = after)
+            ans <- reviewRepository.list(limit, courseCode = courseCode.some, withComments = true.some, visible = true.some, after = after)
                 .transact(xa)
                 .map(anonymize)
                 .compile
