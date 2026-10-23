@@ -39,7 +39,7 @@ operation UnhideReviewComment {
     errors: [NotFound, InvalidModerationState]
 }
 
-/// Lists audit log entries, newest first.
+/// Lists audit log entries ordered by id, newest first by default.
 @http(method: "GET", uri: "/api/moderation/actions")
 @readonly
 operation ListModerationActions {
@@ -58,9 +58,13 @@ operation ListModerationActions {
         @default(50)
         limit: Long
 
-        /// Return entries with an id lower than this one.
-        @httpQuery("before")
-        before: Integer
+        /// Return only entries that come after this id in `order`.
+        @httpQuery("after")
+        after: Integer
+
+        @httpQuery("order")
+        @default("desc")
+        order: Ordering
     }
     output := {
         @httpPayload

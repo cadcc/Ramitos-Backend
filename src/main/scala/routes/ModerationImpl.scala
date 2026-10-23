@@ -9,6 +9,7 @@ import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cl.cadcc.ramitos.model.{AccountRole, ModerationLogEntry, ReviewCommentDetails, ModerationActionType as ModelActionType}
 import cl.cadcc.ramitos.repository.{CourseRepository, ModerationLogRepository, ReviewRepository}
 import cl.cadcc.ramitos.routes.utils.*
+import cl.cadcc.ramitos.schema
 import cl.cadcc.ramitos.schema.{InvalidModerationState, ListModerationActionsOutput, ModerationAction, ModerationActionType, ModerationService, ModerationTarget, NotFound}
 import cl.cadcc.ramitos.utils.extensions.*
 import doobie.{ConnectionIO, Transactor}
@@ -100,7 +101,7 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
             _ => reviewRepository.unhideComment(reviewId))
 
     /** HTTP GET /api/moderation/actions */
-    override def listModerationActions(limit: Long, reviewId: Option[Int], actorId: Option[Int], action: Option[ModerationActionType], before: Option[Int]): F[ListModerationActionsOutput] =
+    override def listModerationActions(limit: Long, order: schema.Ordering, reviewId: Option[Int], actorId: Option[Int], action: Option[ModerationActionType], after: Option[Int]): F[ListModerationActionsOutput] =
         for {
             _ <- minPermission(AccountRole.MOD)
             entries <- ModerationLogRepository.list(
@@ -108,7 +109,8 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
                 reviewId = reviewId,
                 actorAccountId = actorId,
                 action = action.map(actionToModel),
-                before = before,
+                after = after,
+                order = order.toModel,
             ).map(modelToSchema).compile.toList.transact(xa)
         } yield ListModerationActionsOutput(entries)
 }
