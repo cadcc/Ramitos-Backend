@@ -6,7 +6,7 @@ import cats.effect.MonadCancelThrow
 import cats.mtl.Ask
 import cats.syntax.all.*
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
-import cl.cadcc.ramitos.model.{AccountRole, ModerationLogEntry, ReviewCommentDetails, ModerationActionType as ModelActionType}
+import cl.cadcc.ramitos.model.{AccountRole, ModerationLogEntry, ReviewHidingDetails, ModerationActionType as ModelActionType}
 import cl.cadcc.ramitos.repository.{CourseRepository, ModerationLogRepository, ReviewRepository}
 import cl.cadcc.ramitos.routes.utils.*
 import cl.cadcc.ramitos.schema
@@ -83,7 +83,7 @@ class ModerationImpl[F[_]: {MonadCancelThrow as F, Transactor as xa}](using sess
                 entry <- ModerationLogRepository.record(session.account.id, action)(
                     reviewId,
                     reason,
-                    ReviewCommentDetails(review.courseCode, review.commentHideLogId),
+                    ReviewHidingDetails(review.courseCode, review.commentHideLogId),
                 )
                 changed <- change(entry.id)
                 _ <- ConnIO.raiseUnless(changed)(InvalidModerationState(invalidState))

@@ -12,11 +12,11 @@ import implicits.given
 import cl.cadcc.ramitos.model.implicits.{jsonbGet, jsonbPut}
 
 /** Details of the review comment actions: a snapshot of the review before the action. */
-case class ReviewCommentDetails(courseCode: String, previousHideLogId: Option[Int])
+case class ReviewHidingDetails(courseCode: String, previousHideLogId: Option[Int])
 
-object ReviewCommentDetails {
-    given codec: Codec[ReviewCommentDetails] =
-        Codec.forProduct2("course_code", "previous_hide_log_id")(ReviewCommentDetails.apply)(d => (d.courseCode, d.previousHideLogId))
+object ReviewHidingDetails {
+    given codec: Codec[ReviewHidingDetails] =
+        Codec.forProduct2("course_code", "previous_hide_log_id")(ReviewHidingDetails.apply)(d => (d.courseCode, d.previousHideLogId))
 }
 
 /**
@@ -39,7 +39,7 @@ sealed trait ModerationActionType {
 object ModerationActionType {
     sealed trait OnReviewComment extends ModerationActionType {
         type Target = Int
-        type Details = ReviewCommentDetails
+        type Details = ReviewHidingDetails
 
         def targetColumns(reviewId: Int): Option[Int] = reviewId.some
         def targetOfColumns(reviewId: Option[Int]): Option[Int] = reviewId
