@@ -5,12 +5,12 @@ import cl.cadcc.ramitos.model.{AccountRole, Stat, given}
 import cats.MonadThrow
 import cl.cadcc.ramitos.middleware.AuthMiddleware.Session
 import cats.mtl.Ask
-import cl.cadcc.ramitos.schema.ReviewStats
+import cl.cadcc.ramitos.schema.{InsufficientPermissions, ReviewStats}
 
 private[routes] object utils {
     def minPermission[F[_]](role: AccountRole)(using MonadThrow[F])(using ask: Ask[F, Session]): F[Unit] =
         ask.ask.flatMap( session =>
-            MonadThrow[F].raiseUnless(role <= session.account.role)(new Exception("Insufficient Permissions"))
+            MonadThrow[F].raiseUnless(role <= session.account.role)(InsufficientPermissions())
         )
 
     def statsToSchema(m: Map[Stat, Option[Byte]]): ReviewStats =
